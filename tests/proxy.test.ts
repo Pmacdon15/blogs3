@@ -32,12 +32,16 @@ describe("proxy", () => {
     },
   );
 
-  it.each(["/", "/blog/hello", "/sign-in", "/api/posts/search", "/api/mcp"])(
-    "leaves %s public",
-    async (path) => {
-      expect(await run(path)).not.toHaveBeenCalled();
-    },
-  );
+  it.each([
+    "/",
+    "/blog/hello",
+    "/sign-in",
+    "/admin/mcp",
+    "/api/posts/search",
+    "/api/mcp",
+  ])("leaves %s public", async (path) => {
+    expect(await run(path)).not.toHaveBeenCalled();
+  });
 });
 
 describe("proxy matcher", () => {
