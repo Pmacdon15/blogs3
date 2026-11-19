@@ -1,0 +1,29 @@
+# Local Postgres behind Neon's HTTP proxy, so the Neon serverless driver works
+# offline exactly like in production. Pick any local password first:
+#   export LOCAL_DB_PASSWORD="$(openssl rand -hex 16)"
+# and point DATABASE_URL at db.localtest.me:5432/main as user postgres with
+# that password (see README).
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: postgres
+      # Local throwaway database; the password comes from your shell.
+      POSTGRES_PASSWORD: ${LOCAL_DB_PASSWORD:?export LOCAL_DB_PASSWORD first}
+      POSTGRES_DB: main
+    ports: ["5432:5432"]
+    volumes: ["./schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro"]
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres", "-d", "main"]
+      interval: 2s
+      retries: 30
+  neon-proxy:
+    image: ghcr.io/timowilhelm/local-neon-http-proxy:main
+    environment:
+      PG_CONNECTION_STRING: postgres://postgres@postgres:5432/main
+      PGPASSWORD: ${LOCAL_DB_PASSWORD:?export LOCAL_DB_PASSWORD first}
+    ports: ["4444:4444"]
+    # The proxy sets up its own schema on start, so Postgres must be ready.
+    depends_on:
+      postgres:
+        condition: service_healthy

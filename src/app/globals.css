@@ -1,0 +1,74 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * Design tokens: white surfaces, blue brand. Public pages use the airy
+ * "paper" look; admin pages use the denser "studio" look (see the admin
+ * layout), both from these tokens.
+ */
+@theme {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, monospace;
+
+  --color-brand-50: oklch(0.97 0.02 255);
+  --color-brand-100: oklch(0.93 0.04 255);
+  --color-brand-200: oklch(0.87 0.08 255);
+  --color-brand-300: oklch(0.78 0.12 255);
+  --color-brand-400: oklch(0.68 0.17 258);
+  --color-brand-500: oklch(0.6 0.2 260);
+  --color-brand-600: oklch(0.53 0.21 262);
+  --color-brand-700: oklch(0.46 0.19 263);
+  --color-brand-800: oklch(0.38 0.15 264);
+  --color-brand-900: oklch(0.3 0.11 265);
+  --color-brand-950: oklch(0.2 0.07 266);
+
+  --color-ink: oklch(0.21 0.03 264);
+  --color-muted: oklch(0.5 0.03 260);
+  --color-line: oklch(0.92 0.01 255);
+  --color-surface: oklch(1 0 0);
+  --color-canvas: oklch(0.985 0.005 255);
+
+  --radius-card: 1.25rem;
+  --shadow-card:
+    0 1px 2px oklch(0.2 0.05 260 / 0.04),
+    0 8px 24px -12px oklch(0.3 0.1 260 / 0.18);
+  --shadow-lift:
+    0 2px 4px oklch(0.2 0.05 260 / 0.05),
+    0 18px 40px -16px oklch(0.4 0.16 260 / 0.35);
+
+  --animate-shimmer: shimmer 1.6s ease-in-out infinite;
+
+  @keyframes shimmer {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.55;
+    }
+  }
+}
+
+@layer base {
+  html {
+    @apply bg-canvas text-ink antialiased;
+  }
+
+  ::selection {
+    @apply bg-brand-200 text-brand-950;
+  }
+
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-brand-500;
+  }
+}
+
+@utility container-page {
+  @apply mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8;
+}
+
+@utility card {
+  @apply rounded-(--radius-card) border border-line bg-surface shadow-(--shadow-card);
+}

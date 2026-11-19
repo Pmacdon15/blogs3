@@ -1,0 +1,159 @@
+name: Tests
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+  # Lets the Biome workflow re-run this on its own autofix commit.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # The vitest projects run as parallel jobs. Each one saves a blob report
+  # with its coverage, and the Coverage job merges them to enforce 100%.
+  vitest:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - project: unit
+            name: Unit tests
+          - project: components
+            name: Component tests
+          - project: app
+            name: App and API route tests
+    env:
+      # Report only the files this job loads; thresholds are checked after the merge.
+      COVERAGE_SHARD: 1
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: package.json
+      - run: bun install --frozen-lockfile
+      - run: >-
+          bunx vitest run --project ${{ matrix.project }} --coverage
+          --reporter=default --reporter=blob
+          --outputFile.blob=.vitest-reports/blob-${{ matrix.project }}.json
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ !cancelled() }}
+        with:
+          name: blob-${{ matrix.project }}
+          path: .vitest-reports/
+          include-hidden-files: true
+          retention-days: 1
+
+  coverage:
+    name: Coverage
+    needs: vitest
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: package.json
+      - run: bun install --frozen-lockfile
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: blob-*
+          path: .vitest-reports
+          merge-multiple: true
+      # Fails if lines, branches, functions or statements drop below 100%.
+      - run: >-
+          bunx vitest --merge-reports=.vitest-reports --coverage
+          --coverage.reporter=text --coverage.reporter=json
+      # The merge only knows files some job loaded; catch any no test imports.
+      - run: bun scripts/check-untested-files.ts
+
+  static-shell:
+    name: Static shell
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # The home page's cached post list is prerendered at build time, so the
+    # build reads a real database: Postgres behind Neon's HTTP proxy, as in
+    # docker-compose.yml.
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          # Local throwaway database: trust auth, so no password is stored anywhere.
+          POSTGRES_HOST_AUTH_METHOD: trust
+          POSTGRES_DB: main
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres -d main"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 30
+      neon-proxy:
+        image: ghcr.io/timowilhelm/local-neon-http-proxy:main
+        env:
+          PG_CONNECTION_STRING: postgres://postgres@postgres:5432/main
+          # The proxy insists on a password for its own connection; Postgres
+          # trusts every local connection, so any per-run value works.
+          PGPASSWORD: ${{ github.run_id }}
+        ports: ["4444:4444"]
+    env:
+      NEXT_TELEMETRY_DISABLED: 1
+      REQUIRE_BUILD: 1
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: package.json
+      - run: bun install --frozen-lockfile
+      # Placeholder Clerk keys, made at runtime so nothing key-shaped is
+      # committed. The build prerenders pages but never calls Clerk.
+      - name: Placeholder Clerk keys
+        run: |
+          echo "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_$(printf 'example.clerk.accounts.dev$' | base64)" >> "$GITHUB_ENV"
+          echo "CLERK_SECRET_KEY=sk_test_$(openssl rand -hex 16)" >> "$GITHUB_ENV"
+      # The proxy checks the client against the role's stored password, so
+      # the role gets a random one for this run only. DATABASE_URL points at
+      # db.localtest.me (127.0.0.1), which src/db/client.ts sends to the
+      # proxy on port 4444.
+      - name: Database role password
+        run: |
+          password="$(openssl rand -hex 16)"
+          echo "::add-mask::$password"
+          psql -h localhost -U postgres -d main -v ON_ERROR_STOP=1 \
+            -c "alter role postgres password '$password'"
+          printf 'DATABASE_URL=%s://%s:%s@%s/main\n' \
+            postgres postgres "$password" db.localtest.me:5432 >> "$GITHUB_ENV"
+      - name: Apply schema.sql
+        run: psql "postgres://postgres@localhost:5432/main" -v ON_ERROR_STOP=1 -f schema.sql
+      - name: Wait for the Neon HTTP proxy
+        run: |
+          for attempt in $(seq 1 30); do
+            if curl -sf -X POST http://localhost:4444/sql \
+              -H "Neon-Connection-String: $DATABASE_URL" \
+              -H "Content-Type: application/json" \
+              -d '{"query":"select count(*) from posts","params":[]}'; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::The Neon HTTP proxy never answered on port 4444"
+          exit 1
+      # `next build`, then check every page kept its static shell.
+      - run: bun run test:build
