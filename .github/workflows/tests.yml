@@ -106,11 +106,11 @@ jobs:
         image: ghcr.io/timowilhelm/local-neon-http-proxy:main
         env:
           PG_CONNECTION_STRING: postgres://postgres@postgres:5432/main
+          # The proxy insists on a password for its own connection; Postgres
+          # trusts every local connection, so any per-run value works.
+          PGPASSWORD: ${{ github.run_id }}
         ports: ["4444:4444"]
     env:
-      # db.localtest.me resolves to 127.0.0.1; src/db/client.ts sends it to
-      # the proxy on port 4444.
-      DATABASE_URL: postgres://postgres@db.localtest.me:5432/main
       NEXT_TELEMETRY_DISABLED: 1
       REQUIRE_BUILD: 1
     steps:
@@ -128,6 +128,18 @@ jobs:
         run: |
           echo "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_$(printf 'example.clerk.accounts.dev$' | base64)" >> "$GITHUB_ENV"
           echo "CLERK_SECRET_KEY=sk_test_$(openssl rand -hex 16)" >> "$GITHUB_ENV"
+      # The proxy checks the client against the role's stored password, so
+      # the role gets a random one for this run only. DATABASE_URL points at
+      # db.localtest.me (127.0.0.1), which src/db/client.ts sends to the
+      # proxy on port 4444.
+      - name: Database role password
+        run: |
+          password="$(openssl rand -hex 16)"
+          echo "::add-mask::$password"
+          psql -h localhost -U postgres -d main -v ON_ERROR_STOP=1 \
+            -c "alter role postgres password '$password'"
+          printf 'DATABASE_URL=%s://%s:%s@%s/main\n' \
+            postgres postgres "$password" db.localtest.me:5432 >> "$GITHUB_ENV"
       - name: Apply schema.sql
         run: psql "postgres://postgres@localhost:5432/main" -v ON_ERROR_STOP=1 -f schema.sql
       - name: Wait for the Neon HTTP proxy

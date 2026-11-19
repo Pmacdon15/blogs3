@@ -112,7 +112,10 @@ so the Neon serverless driver works offline exactly as in production. Point
 client (`src/db/client.ts`) sends that host to the proxy on port 4444:
 
 ```sh
-DATABASE_URL=postgres://postgres@db.localtest.me:5432/main
+export LOCAL_DB_PASSWORD="$(openssl rand -hex 16)"
+docker compose up -d
+printf 'DATABASE_URL=%s://%s:%s@%s/main\n' \
+  postgres postgres "$LOCAL_DB_PASSWORD" db.localtest.me:5432 >> .env.local
 ```
 
 To re-apply the schema to any database: `bun run db:schema`.
