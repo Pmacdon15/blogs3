@@ -1,9 +1,9 @@
 import "server-only";
-import { auth, clerkClient } from "@clerk/nextjs/server";
+import { auth } from "@clerk/nextjs/server";
 import type { Route } from "next";
-import { cacheLife, cacheTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { cache } from "react";
+import { dbGetPrimaryEmail } from "@/db/users";
 
 /*
  * Who may edit. Auth is only checked for editing and for unpublished posts;
@@ -22,19 +22,6 @@ function parseList(raw: string | undefined) {
     .filter(Boolean);
 }
 
-/** The user's primary email, cached per user so admin checks stay cheap. */
-export async function getPrimaryEmail(userId: string): Promise<string | null> {
-  "use cache";
-  cacheLife("minutes");
-  cacheTag(`user-email:${userId}`);
-  const client = await clerkClient();
-  const user = await client.users.getUser(userId);
-  const primary = user.emailAddresses.find(
-    (email) => email.id === user.primaryEmailAddressId,
-  );
-  return primary?.emailAddress.toLowerCase() ?? null;
-}
-
 export async function isAdmin(userId: string): Promise<boolean> {
   const ids = parseList(process.env.ADMIN_USER_IDS);
   const emails = parseList(process.env.ADMIN_EMAILS);
@@ -43,7 +30,7 @@ export async function isAdmin(userId: string): Promise<boolean> {
   }
   if (ids.includes(userId.toLowerCase())) return true;
   if (emails.length === 0) return false;
-  const email = await getPrimaryEmail(userId);
+  const email = await dbGetPrimaryEmail(userId);
   return email !== null && emails.includes(email);
 }
 
