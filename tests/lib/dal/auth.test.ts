@@ -2,60 +2,29 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   auth: vi.fn(),
-  getUser: vi.fn(),
-  cacheLife: vi.fn(),
-  cacheTag: vi.fn(),
+  getPrimaryEmail: vi.fn(),
   redirect: vi.fn((url: string) => {
     throw new Error(`NEXT_REDIRECT ${url}`);
   }),
 }));
 
-vi.mock("@clerk/nextjs/server", () => ({
-  auth: mocks.auth,
-  clerkClient: async () => ({ users: { getUser: mocks.getUser } }),
-}));
-vi.mock("next/cache", () => ({
-  cacheLife: mocks.cacheLife,
-  cacheTag: mocks.cacheTag,
-}));
+vi.mock("@clerk/nextjs/server", () => ({ auth: mocks.auth }));
+vi.mock("@/db/users", () => ({ dbGetPrimaryEmail: mocks.getPrimaryEmail }));
 vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
 
 import {
   assertAdmin,
-  getPrimaryEmail,
   isAdmin,
   NotAuthorizedError,
   requireAdminAction,
   requireAdminPage,
 } from "@/lib/dal/auth";
 
-const user = (primary: string | null) => ({
-  primaryEmailAddressId: primary,
-  emailAddresses: [
-    { id: "e1", emailAddress: "Other@Example.com" },
-    { id: "e2", emailAddress: "Admin@Example.com" },
-  ],
-});
-
 beforeEach(() => {
   vi.stubEnv("ADMIN_USER_IDS", "");
   vi.stubEnv("ADMIN_EMAILS", "");
   vi.stubEnv("VERCEL_ENV", "");
-  mocks.getUser.mockResolvedValue(user("e2"));
-});
-
-describe("getPrimaryEmail", () => {
-  it("returns the primary address, lowercased, cached per user", async () => {
-    await expect(getPrimaryEmail("user_1")).resolves.toBe("admin@example.com");
-    expect(mocks.getUser).toHaveBeenCalledWith("user_1");
-    expect(mocks.cacheLife).toHaveBeenCalledWith("minutes");
-    expect(mocks.cacheTag).toHaveBeenCalledWith("user-email:user_1");
-  });
-
-  it("returns null without a primary address", async () => {
-    mocks.getUser.mockResolvedValue(user(null));
-    await expect(getPrimaryEmail("user_1")).resolves.toBeNull();
-  });
+  mocks.getPrimaryEmail.mockResolvedValue("admin@example.com");
 });
 
 describe("isAdmin", () => {
@@ -76,7 +45,7 @@ describe("isAdmin", () => {
     await expect(isAdmin("USER_a")).resolves.toBe(true);
     await expect(isAdmin("user_c")).resolves.toBe(true);
     await expect(isAdmin("user_d")).resolves.toBe(false);
-    expect(mocks.getUser).not.toHaveBeenCalled();
+    expect(mocks.getPrimaryEmail).not.toHaveBeenCalled();
   });
 
   it("matches the primary email against ADMIN_EMAILS", async () => {
@@ -84,7 +53,8 @@ describe("isAdmin", () => {
     await expect(isAdmin("user_1")).resolves.toBe(true);
     vi.stubEnv("ADMIN_EMAILS", "someone@example.com other@example.com");
     await expect(isAdmin("user_1")).resolves.toBe(false);
-    mocks.getUser.mockResolvedValue(user(null));
+    expect(mocks.getPrimaryEmail).toHaveBeenCalledWith("user_1");
+    mocks.getPrimaryEmail.mockResolvedValue(null);
     await expect(isAdmin("user_1")).resolves.toBe(false);
   });
 });
