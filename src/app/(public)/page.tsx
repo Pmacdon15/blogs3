@@ -1,4 +1,3 @@
-import { Sparkles } from "lucide-react";
 import { cacheLife, cacheTag } from "next/cache";
 import { Suspense } from "react";
 import { PostList } from "@/components/blog/post-list";
@@ -18,10 +17,6 @@ export default function HomePage() {
           <div className="absolute inset-x-0 bottom-0 h-24 bg-linear-to-b from-transparent to-canvas" />
         </div>
         <div className="container-page flex flex-col items-center gap-6 pt-16 pb-14 text-center sm:pt-24 sm:pb-20">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-brand-200 bg-white/70 px-3 py-1 font-medium text-brand-700 text-xs backdrop-blur">
-            <Sparkles aria-hidden="true" className="size-3.5" />
-            Fresh writing, every week
-          </span>
           <h1 className="max-w-3xl text-balance font-semibold text-4xl text-ink tracking-tight sm:text-5xl lg:text-6xl">
             Notes, guides and ideas,{" "}
             <span className="bg-linear-to-r from-brand-500 to-brand-800 bg-clip-text text-transparent">

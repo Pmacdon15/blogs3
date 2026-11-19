@@ -33,6 +33,7 @@ describe("home page", () => {
     const html = await renderShell(<HomePage />);
     expect(html).toContain("<h1");
     expect(html).toContain("written to be useful");
+    expect(html).not.toContain("Fresh writing, every week");
     expect(html).toContain("Latest posts");
     expect(html).toContain('role="combobox"');
   });
