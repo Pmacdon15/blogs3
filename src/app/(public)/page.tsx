@@ -1,15 +1,36 @@
+import type { Metadata } from "next";
 import { cacheLife, cacheTag } from "next/cache";
 import { Suspense } from "react";
 import { PostList } from "@/components/blog/post-list";
 import { SearchBar } from "@/components/blog/search-bar";
+import { JsonLd } from "@/components/seo/json-ld";
 import { PostGridSkeleton } from "@/components/ui/skeleton";
 import { dbListPublishedPosts } from "@/db/posts";
 import { CACHE_TAGS } from "@/lib/cache/tags";
+import { SITE_NAME, SITE_TAGLINE, websiteJsonLd } from "@/lib/seo";
+
+export const metadata: Metadata = {
+  title: { absolute: SITE_NAME },
+  description: SITE_TAGLINE,
+  alternates: { canonical: "/" },
+  openGraph: {
+    type: "website",
+    title: SITE_NAME,
+    description: SITE_TAGLINE,
+    url: "/",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: SITE_NAME,
+    description: SITE_TAGLINE,
+  },
+};
 
 /* Reads no URL or session: the whole page, posts included, builds static (○). */
 export default function HomePage() {
   return (
     <>
+      <JsonLd data={websiteJsonLd()} />
       <section className="relative isolate overflow-hidden">
         <div aria-hidden="true" className="absolute inset-0 -z-10">
           <div className="absolute -top-32 left-1/2 h-[28rem] w-[56rem] -translate-x-1/2 rounded-full bg-linear-to-r from-brand-200/70 via-brand-100/60 to-sky-100/70 blur-3xl" />

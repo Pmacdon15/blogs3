@@ -8,10 +8,12 @@ import { CoverImage } from "@/components/blog/cover-image";
 import { PostBlocks } from "@/components/blog/post-blocks";
 import { PostMeta } from "@/components/blog/post-meta";
 import { TagList } from "@/components/blog/tag-list";
+import { JsonLd } from "@/components/seo/json-ld";
 import { ArticleSkeleton } from "@/components/ui/skeleton";
 import { dbGetPublishedPostBySlug } from "@/db/posts";
 import { CACHE_TAGS } from "@/lib/cache/tags";
 import { readingMinutes } from "@/lib/reading-time";
+import { blogPostingJsonLd } from "@/lib/seo";
 import type { Post } from "@/lib/types";
 
 type Props = { params: Promise<{ slug: string }> };
@@ -27,17 +29,35 @@ async function getPublishedPost(slug: string) {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const post = await getPublishedPost(slug);
-  if (!post) return { title: "Post not found" };
+  if (!post) {
+    return {
+      title: "Post not found",
+      robots: { index: false, follow: false },
+    };
+  }
   const description = post.excerpt || undefined;
+  const canonical = `/blog/${post.slug}`;
   return {
     title: post.title,
     description,
+    keywords: post.tags.length > 0 ? post.tags : undefined,
+    alternates: { canonical },
     openGraph: {
       type: "article",
+      url: canonical,
       title: post.title,
       description,
       publishedTime: post.publishedAt ?? undefined,
+      modifiedTime: post.updatedAt,
       tags: post.tags,
+      images: post.coverImageUrl
+        ? [{ url: post.coverImageUrl, alt: post.title }]
+        : undefined,
+    },
+    twitter: {
+      card: post.coverImageUrl ? "summary_large_image" : "summary",
+      title: post.title,
+      description,
       images: post.coverImageUrl ? [post.coverImageUrl] : undefined,
     },
   };
@@ -75,6 +95,7 @@ async function PostArticle({ slug }: { slug: Promise<string> }) {
 function PostBody({ post }: { post: Post }) {
   return (
     <>
+      <JsonLd data={blogPostingJsonLd(post)} />
       <header className="flex flex-col gap-5">
         <TagList tags={post.tags} />
         <h1 className="text-balance font-semibold text-3xl text-ink tracking-tight sm:text-4xl lg:text-5xl">
