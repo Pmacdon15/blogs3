@@ -49,10 +49,10 @@ export type AudienceMode = "off" | "log" | "enforce";
  * server, from `MCP_TOKEN_AUDIENCE`: "enforce" rejects a token whose
  * audience is missing or different, "log" only warns (to see whether the
  * clients' tokens carry it before enforcing), and "off" skips the check.
- * Unset or unrecognised values default to "enforce" in production and
- * "off" elsewhere, so production only accepts tokens issued for this server
- * unless it is explicitly turned off. Each check is one extra Clerk Backend
- * API call.
+ * Clerk only puts an `aud` claim in access tokens once audience claims are
+ * turned on in the Clerk dashboard, so unset or unrecognised values default
+ * to "log" in production and "off" elsewhere. Each check is one extra Clerk
+ * Backend API call.
  */
 export function audienceMode(
   raw = process.env.MCP_TOKEN_AUDIENCE,
@@ -60,7 +60,7 @@ export function audienceMode(
 ): AudienceMode {
   const mode = raw?.trim().toLowerCase();
   if (mode === "enforce" || mode === "log" || mode === "off") return mode;
-  return production ? "enforce" : "off";
+  return production ? "log" : "off";
 }
 
 /** Whether the token was issued for this server, per {@link audienceMode}. */

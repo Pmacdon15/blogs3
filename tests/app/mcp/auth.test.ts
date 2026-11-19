@@ -126,23 +126,27 @@ describe("verifyMcpToken audience check", () => {
     expect(audienceMode("off")).toBe("off");
   });
 
-  it("defaults to enforce in production unless explicitly set", () => {
-    expect(audienceMode(undefined, true)).toBe("enforce");
-    expect(audienceMode("yes", true)).toBe("enforce");
+  it("defaults to log in production unless explicitly set", () => {
+    expect(audienceMode(undefined, true)).toBe("log");
+    expect(audienceMode("yes", true)).toBe("log");
     expect(audienceMode("off", true)).toBe("off");
     expect(audienceMode("log", true)).toBe("log");
+    expect(audienceMode("enforce", true)).toBe("enforce");
   });
 
-  it("enforces the audience in production when MCP_TOKEN_AUDIENCE is unset", async () => {
+  it("logs but accepts a token without aud in production when MCP_TOKEN_AUDIENCE is unset", async () => {
     vi.stubEnv("VERCEL_ENV", "production");
     vi.stubEnv("MCP_ALLOWED_OAUTH_CLIENT_IDS", "client_x");
     vi.stubEnv("MCP_TOKEN_AUDIENCE", "");
     mockVerifyAccessToken.mockRejectedValueOnce(new Error("aud mismatch"));
 
-    expect(await verifyMcpToken(req, "oat_1")).toBeUndefined();
+    expect(await verifyMcpToken(req, "oat_1")).toBeDefined();
     expect(mockVerifyAccessToken).toHaveBeenCalledWith("oat_1", {
       audience: mcpResourceUrl(req),
     });
+    expect(console.warn).toHaveBeenCalledWith(
+      expect.stringContaining("MCP_TOKEN_AUDIENCE=log"),
+    );
   });
 
   it("skips the extra Clerk call when off", async () => {
