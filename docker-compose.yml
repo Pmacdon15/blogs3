@@ -1,0 +1,19 @@
+# Local Postgres behind Neon's HTTP proxy, so the Neon serverless driver works
+# offline exactly like in production. DATABASE_URL:
+#   postgres://postgres@db.localtest.me:5432/main
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: postgres
+      # Local throwaway database: trust auth, so no password is stored anywhere.
+      POSTGRES_HOST_AUTH_METHOD: trust
+      POSTGRES_DB: main
+    ports: ["5432:5432"]
+    volumes: ["./schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro"]
+  neon-proxy:
+    image: ghcr.io/timowilhelm/local-neon-http-proxy:main
+    environment:
+      PG_CONNECTION_STRING: postgres://postgres@postgres:5432/main
+    ports: ["4444:4444"]
+    depends_on: [postgres]

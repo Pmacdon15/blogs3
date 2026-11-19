@@ -1,0 +1,71 @@
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+
+vi.mock("@clerk/nextjs", () => ({
+  SignIn: () => <div data-testid="clerk-sign-in" />,
+  SignUp: () => <div data-testid="clerk-sign-up" />,
+}));
+
+import PostNotFound from "@/app/(public)/blog/[slug]/not-found";
+import PublicLayout from "@/app/(public)/layout";
+import SignInPage, {
+  generateStaticParams as signInParams,
+} from "@/app/(public)/sign-in/[[...sign-in]]/page";
+import SignUpPage, {
+  generateStaticParams as signUpParams,
+} from "@/app/(public)/sign-up/[[...sign-up]]/page";
+import NotFound from "@/app/not-found";
+
+describe("public layout", () => {
+  it("frames the page with the header, main and footer, and no auth UI", () => {
+    render(
+      <PublicLayout>
+        <p>Content</p>
+      </PublicLayout>,
+    );
+    expect(screen.getByRole("banner")).toBeInTheDocument();
+    expect(screen.getByRole("main")).toHaveTextContent("Content");
+    expect(screen.getByRole("contentinfo")).toBeInTheDocument();
+    expect(screen.queryByText(/sign in/i)).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Admin" })).toHaveAttribute(
+      "href",
+      "/admin",
+    );
+  });
+});
+
+describe("not found pages", () => {
+  it("renders the global 404 in the public frame", () => {
+    render(<NotFound />);
+    expect(
+      screen.getByRole("heading", { level: 1, name: "This page wandered off" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Back to the blog" }),
+    ).toHaveAttribute("href", "/");
+  });
+
+  it("renders the missing-post page", () => {
+    render(<PostNotFound />);
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Post not found" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Browse all posts" }),
+    ).toHaveAttribute("href", "/");
+  });
+});
+
+describe("auth pages", () => {
+  it("prerender only their catch-all root", () => {
+    expect(signInParams()).toEqual([{ "sign-in": [] }]);
+    expect(signUpParams()).toEqual([{ "sign-up": [] }]);
+  });
+
+  it("render Clerk's sign-in and sign-up", () => {
+    render(<SignInPage />);
+    expect(screen.getByTestId("clerk-sign-in")).toBeInTheDocument();
+    render(<SignUpPage />);
+    expect(screen.getByTestId("clerk-sign-up")).toBeInTheDocument();
+  });
+});
