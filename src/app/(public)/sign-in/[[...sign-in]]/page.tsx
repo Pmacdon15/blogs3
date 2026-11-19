@@ -1,6 +1,12 @@
 import { SignIn } from "@clerk/nextjs";
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
+
+export const metadata: Metadata = {
+  title: "Sign in",
+  robots: { index: false, follow: false },
+};
 
 /* Only the root is prerendered, so the page builds static (○). */
 export function generateStaticParams() {

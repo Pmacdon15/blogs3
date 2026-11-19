@@ -27,13 +27,16 @@ vi.mock("next/cache", () => ({
 }));
 
 import {
+  dbCountPublishedPosts,
   dbCreatePost,
   dbDeletePost,
   dbFindPostIdBySlug,
   dbGetPostById,
   dbGetPublishedPostBySlug,
+  dbLatestPublishedPostUpdatedAt,
   dbListAllPosts,
   dbListPublishedPosts,
+  dbListPublishedPostsForSitemap,
   dbSearchPublishedPosts,
   dbSetPostStatus,
   dbUpdatePost,
@@ -133,6 +136,48 @@ describe("public reads", () => {
     ]);
     await dbSearchPublishedPosts("x", 3);
     expect(lastCall().values.at(-1)).toBe(3);
+  });
+
+  it("counts published posts for sitemap pagination", async () => {
+    mocks.state.rows = [{ count: 42 }];
+    await expect(dbCountPublishedPosts()).resolves.toBe(42);
+    expect(lastCall().text).toBe(
+      "select count(*)::int as count from posts where status = 'published'",
+    );
+    mocks.state.rows = [];
+    await expect(dbCountPublishedPosts()).resolves.toBe(0);
+  });
+
+  it("lists paginated sitemap rows with slug, updatedAt and coverImageUrl", async () => {
+    mocks.state.rows = [
+      {
+        slug: "hello",
+        updated_at: new Date("2026-01-03T00:00:00Z"),
+        cover_image_url: "https://example.com/cover.png",
+      },
+    ];
+    await expect(dbListPublishedPostsForSitemap(100)).resolves.toEqual([
+      {
+        slug: "hello",
+        updatedAt: "2026-01-03T00:00:00.000Z",
+        coverImageUrl: "https://example.com/cover.png",
+      },
+    ]);
+    expect(lastCall().values).toEqual([100, 0]);
+
+    await dbListPublishedPostsForSitemap(50, 150);
+    expect(lastCall().values).toEqual([50, 150]);
+  });
+
+  it("reads the latest published post updated_at timestamp", async () => {
+    mocks.state.rows = [{ updated_at: new Date("2026-01-03T00:00:00Z") }];
+    await expect(dbLatestPublishedPostUpdatedAt()).resolves.toBe(
+      "2026-01-03T00:00:00.000Z",
+    );
+    mocks.state.rows = [{ updated_at: null }];
+    await expect(dbLatestPublishedPostUpdatedAt()).resolves.toBeNull();
+    mocks.state.rows = [];
+    await expect(dbLatestPublishedPostUpdatedAt()).resolves.toBeNull();
   });
 });
 

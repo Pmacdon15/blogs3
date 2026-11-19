@@ -3,7 +3,7 @@ import { cacheLife, cacheTag } from "next/cache";
 import { sql } from "@/db/client";
 import { CACHE_TAGS } from "@/lib/cache/tags";
 import type { Block, PostInput, PostPatch } from "@/lib/schemas";
-import type { Post, PostStatus, PostSummary } from "@/lib/types";
+import type { Post, PostStatus, PostSummary, SitemapPost } from "@/lib/types";
 
 /*
  * Raw SQL for posts. No auth here: callers are the public pages (published
@@ -95,6 +95,49 @@ export async function dbSearchPublishedPosts(
     limit ${limit}
   `) as PostRow[];
   return rows.map(toSummary);
+}
+
+/** Total number of published posts, used to paginate sitemaps as the site grows. */
+export async function dbCountPublishedPosts(): Promise<number> {
+  const rows = (await sql()`
+    select count(*)::int as count from posts where status = 'published'
+  `) as { count: number }[];
+  return Number(rows[0]?.count ?? 0);
+}
+
+/** One page of published posts for sitemap generation, newest first. */
+export async function dbListPublishedPostsForSitemap(
+  limit: number,
+  offset = 0,
+): Promise<SitemapPost[]> {
+  const rows = (await sql()`
+    select slug, updated_at, cover_image_url
+    from posts
+    where status = 'published'
+    order by published_at desc, id desc
+    limit ${limit}
+    offset ${offset}
+  `) as {
+    slug: string;
+    updated_at: Date | string;
+    cover_image_url: string | null;
+  }[];
+  return rows.map((row) => ({
+    slug: row.slug,
+    updatedAt: iso(row.updated_at),
+    coverImageUrl: row.cover_image_url,
+  }));
+}
+
+/** Most recent `updated_at` across published posts, or null if none exist. */
+export async function dbLatestPublishedPostUpdatedAt(): Promise<string | null> {
+  const rows = (await sql()`
+    select max(updated_at) as updated_at
+    from posts
+    where status = 'published'
+  `) as { updated_at: Date | string | null }[];
+  const value = rows[0]?.updated_at;
+  return value ? iso(value) : null;
 }
 
 // ------------------------------------------------- private reads (cached here)

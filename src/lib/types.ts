@@ -21,6 +21,9 @@ export type Post = {
 /** What lists and search results need: no blocks. */
 export type PostSummary = Omit<Post, "blocks" | "authorId">;
 
+/** Minimal fields needed to build sitemap entries without loading post bodies. */
+export type SitemapPost = Pick<Post, "slug" | "updatedAt" | "coverImageUrl">;
+
 export type Result<T> =
   | { ok: true; data: T }
   | { ok: false; error: string; fieldErrors?: Record<string, string[]> };

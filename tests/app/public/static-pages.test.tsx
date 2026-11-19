@@ -9,9 +9,11 @@ vi.mock("@clerk/nextjs", () => ({
 import PostNotFound from "@/app/(public)/blog/[slug]/not-found";
 import PublicLayout from "@/app/(public)/layout";
 import SignInPage, {
+  metadata as signInMetadata,
   generateStaticParams as signInParams,
 } from "@/app/(public)/sign-in/[[...sign-in]]/page";
 import SignUpPage, {
+  metadata as signUpMetadata,
   generateStaticParams as signUpParams,
 } from "@/app/(public)/sign-up/[[...sign-up]]/page";
 import NotFound from "@/app/not-found";
@@ -67,5 +69,16 @@ describe("auth pages", () => {
     expect(screen.getByTestId("clerk-sign-in")).toBeInTheDocument();
     render(<SignUpPage />);
     expect(screen.getByTestId("clerk-sign-up")).toBeInTheDocument();
+  });
+
+  it("mark auth pages noindex", () => {
+    expect(signInMetadata).toEqual({
+      title: "Sign in",
+      robots: { index: false, follow: false },
+    });
+    expect(signUpMetadata).toEqual({
+      title: "Sign up",
+      robots: { index: false, follow: false },
+    });
   });
 });

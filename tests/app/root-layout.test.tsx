@@ -33,9 +33,27 @@ describe("RootLayout", () => {
   });
 
   it("describes the site", () => {
-    expect(metadata).toEqual({
+    expect(metadata).toMatchObject({
+      metadataBase: expect.any(URL),
       title: { default: "Blogs3", template: "%s · Blogs3" },
       description: "Notes, guides and ideas.",
+      openGraph: {
+        type: "website",
+        siteName: "Blogs3",
+        title: "Blogs3",
+        description: "Notes, guides and ideas.",
+        locale: "en_US",
+        url: "/",
+      },
+      twitter: {
+        card: "summary_large_image",
+        title: "Blogs3",
+        description: "Notes, guides and ideas.",
+      },
+      robots: {
+        index: true,
+        follow: true,
+      },
     });
     expect(viewport).toEqual({ themeColor: "#2563eb" });
   });

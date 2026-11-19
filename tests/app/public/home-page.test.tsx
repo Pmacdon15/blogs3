@@ -21,16 +21,27 @@ vi.mock("@/hooks/use-post-search", () => ({
   usePostSearch: () => ({ data: undefined, isError: false, isFetching: false }),
 }));
 
-import HomePage from "@/app/(public)/page";
+import HomePage, { metadata } from "@/app/(public)/page";
 
 describe("home page", () => {
   beforeEach(() => {
     mocks.dbListPublishedPosts.mockResolvedValue([]);
   });
 
-  it("keeps the hero, search and section heading in the static shell", async () => {
+  it("exports canonical home page SEO metadata", () => {
+    expect(metadata).toMatchObject({
+      title: { absolute: "Blogs3" },
+      alternates: { canonical: "/" },
+      openGraph: { type: "website", url: "/" },
+      twitter: { card: "summary_large_image" },
+    });
+  });
+
+  it("keeps the hero, JSON-LD, search and section heading in the static shell", async () => {
     mocks.dbListPublishedPosts.mockReturnValue(pending());
     const html = await renderShell(<HomePage />);
+    expect(html).toContain('type="application/ld+json"');
+    expect(html).toContain('"@type":"WebSite"');
     expect(html).toContain("<h1");
     expect(html).toContain("written to be useful");
     expect(html).not.toContain("Fresh writing, every week");

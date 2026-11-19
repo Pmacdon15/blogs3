@@ -57,6 +57,8 @@ describe("post page", () => {
     expect(html).toContain("#nextjs");
     expect(html).toContain("cover.png");
     expect(html).toContain("Some words here.");
+    expect(html).toContain('type="application/ld+json"');
+    expect(html).toContain('"@type":"BlogPosting"');
   });
 
   it("renders a post without excerpt or cover", async () => {
@@ -82,7 +84,7 @@ describe("post page", () => {
 });
 
 describe("post metadata", () => {
-  it("uses the post's title, excerpt, tags and cover", async () => {
+  it("uses the post's title, excerpt, tags, canonical URL and cover", async () => {
     mocks.dbGetPublishedPostBySlug.mockResolvedValue(
       makePost({ coverImageUrl: "https://example.com/c.png" }),
     );
@@ -90,33 +92,49 @@ describe("post metadata", () => {
     expect(metadata).toEqual({
       title: "Hello world",
       description: "A first post.",
+      keywords: ["intro"],
+      alternates: { canonical: "/blog/hello-world" },
       openGraph: {
         type: "article",
+        url: "/blog/hello-world",
         title: "Hello world",
         description: "A first post.",
         publishedTime: "2026-11-19T10:00:00.000Z",
+        modifiedTime: "2026-11-19T10:00:00.000Z",
         tags: ["intro"],
+        images: [{ url: "https://example.com/c.png", alt: "Hello world" }],
+      },
+      twitter: {
+        card: "summary_large_image",
+        title: "Hello world",
+        description: "A first post.",
         images: ["https://example.com/c.png"],
       },
     });
   });
 
-  it("leaves out an empty excerpt, missing date and cover", async () => {
+  it("leaves out an empty excerpt, empty tags, missing date and cover", async () => {
     mocks.dbGetPublishedPostBySlug.mockResolvedValue(
-      makePost({ excerpt: "", publishedAt: null }),
+      makePost({ excerpt: "", publishedAt: null, tags: [] }),
     );
     const metadata = await generateMetadata({ params: params("hello-world") });
     expect(metadata.description).toBeUndefined();
+    expect(metadata.keywords).toBeUndefined();
     expect(metadata.openGraph).toMatchObject({
       publishedTime: undefined,
       images: undefined,
     });
+    expect(metadata.twitter).toMatchObject({
+      card: "summary",
+      images: undefined,
+    });
   });
 
-  it("titles a missing post", async () => {
+  it("titles a missing post and marks it noindex", async () => {
     mocks.dbGetPublishedPostBySlug.mockResolvedValue(null);
     expect(await generateMetadata({ params: params("nope") })).toEqual({
       title: "Post not found",
+      robots: { index: false, follow: false },
     });
   });
 });
