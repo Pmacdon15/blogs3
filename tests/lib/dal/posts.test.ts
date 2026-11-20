@@ -30,6 +30,7 @@ import {
   deletePost,
   getPostForEdit,
   listPostsForAdmin,
+  matchesImageSignature,
   setPostStatus,
   updatePost,
   uploadImage,
@@ -71,6 +72,10 @@ beforeEach(() => {
   vi.spyOn(console, "error").mockImplementation(() => {});
 });
 
+const PNG_BYTES = new Uint8Array([
+  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+]);
+
 /** Every DAL function checks the admin first and turns errors into results. */
 const calls = {
   listPostsForAdmin: () => listPostsForAdmin("user_1"),
@@ -84,7 +89,7 @@ const calls = {
       name: "a.png",
       type: "image/png",
       size: 10,
-      body: new Blob(["x"]),
+      body: new Blob([PNG_BYTES]),
     }),
 };
 
@@ -307,6 +312,64 @@ describe("deletePost", () => {
   });
 });
 
+describe("matchesImageSignature", () => {
+  it("recognizes valid magic bytes for PNG, JPEG, GIF, WebP and AVIF", () => {
+    expect(matchesImageSignature("image/png", PNG_BYTES)).toBe(true);
+    expect(
+      matchesImageSignature("image/jpeg", new Uint8Array([0xff, 0xd8, 0xff])),
+    ).toBe(true);
+    expect(
+      matchesImageSignature("image/gif", new TextEncoder().encode("GIF87a...")),
+    ).toBe(true);
+    expect(
+      matchesImageSignature("image/gif", new TextEncoder().encode("GIF89a...")),
+    ).toBe(true);
+    expect(
+      matchesImageSignature(
+        "image/webp",
+        new TextEncoder().encode("RIFF0000WEBP"),
+      ),
+    ).toBe(true);
+    expect(
+      matchesImageSignature(
+        "image/avif",
+        new TextEncoder().encode("0000ftypavif"),
+      ),
+    ).toBe(true);
+    expect(
+      matchesImageSignature(
+        "image/avif",
+        new TextEncoder().encode("0000ftypavis"),
+      ),
+    ).toBe(true);
+    expect(
+      matchesImageSignature(
+        "image/avif",
+        new TextEncoder().encode("0000ftypmif1"),
+      ),
+    ).toBe(true);
+  });
+
+  it("rejects mismatched, truncated or unknown types", () => {
+    expect(matchesImageSignature("image/png", new Uint8Array([0x89]))).toBe(
+      false,
+    );
+    expect(
+      matchesImageSignature(
+        "image/webp",
+        new TextEncoder().encode("RIFF0000NOPE"),
+      ),
+    ).toBe(false);
+    expect(
+      matchesImageSignature(
+        "image/avif",
+        new TextEncoder().encode("0000ftypmp42"),
+      ),
+    ).toBe(false);
+    expect(matchesImageSignature("text/html", PNG_BYTES)).toBe(false);
+  });
+});
+
 describe("uploadImage", () => {
   const file = (
     overrides: Partial<Parameters<typeof uploadImage>[1]> = {},
@@ -314,7 +377,7 @@ describe("uploadImage", () => {
     name: "My Photo (1).PNG",
     type: "image/png",
     size: 1024,
-    body: new Blob(["x"]),
+    body: new Blob([PNG_BYTES]),
     ...overrides,
   });
 
@@ -342,17 +405,40 @@ describe("uploadImage", () => {
       expect.anything(),
       expect.anything(),
     );
+    await uploadImage(
+      "user_1",
+      file({ name: "photo", body: PNG_BYTES.buffer }),
+    );
+    expect(mocks.put.mock.lastCall?.[0]).toBe("posts/photo");
     await uploadImage("user_1", file({ name: `${"a".repeat(100)}.png` }));
     expect(mocks.put.mock.lastCall?.[0]).toBe(`posts/${"a".repeat(76)}.png`);
   });
 
-  it("only takes web image types", async () => {
+  it("replaces dangerous or non-image extensions with the type's canonical extension", async () => {
+    mocks.put.mockResolvedValue({ url: "u" });
+    await uploadImage("user_1", file({ name: "exploit.html" }));
+    expect(mocks.put.mock.lastCall?.[0]).toBe("posts/exploit.png");
+    await uploadImage("user_1", file({ name: ".svg" }));
+    expect(mocks.put.mock.lastCall?.[0]).toBe("posts/image.png");
+  });
+
+  it("only takes web image types and verifies magic bytes", async () => {
     await expect(
       uploadImage("user_1", file({ type: "application/pdf" })),
     ).resolves.toEqual({
       ok: false,
       error: "Upload a PNG, JPEG, WebP, GIF or AVIF image.",
     });
+    await expect(
+      uploadImage(
+        "user_1",
+        file({ body: new Blob(["<script>alert(1)</script>"]) }),
+      ),
+    ).resolves.toEqual({
+      ok: false,
+      error: "Upload a PNG, JPEG, WebP, GIF or AVIF image.",
+    });
+    expect(mocks.put).not.toHaveBeenCalled();
   });
 
   it.each([0, 4 * 1024 * 1024 + 1])("refuses a %i byte file", async (size) => {

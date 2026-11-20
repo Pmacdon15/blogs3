@@ -182,6 +182,80 @@ export async function deletePost(
 
 export type UploadedImage = { url: string };
 
+const IMAGE_EXT_BY_TYPE: Record<(typeof IMAGE_TYPES)[number], string> = {
+  "image/png": "png",
+  "image/jpeg": "jpeg",
+  "image/webp": "webp",
+  "image/gif": "gif",
+  "image/avif": "avif",
+};
+
+const ALLOWED_IMAGE_EXTS = new Set([
+  "png",
+  "jpg",
+  "jpeg",
+  "webp",
+  "gif",
+  "avif",
+]);
+
+function startsWith(bytes: Uint8Array, prefix: number[], offset = 0): boolean {
+  if (bytes.length < offset + prefix.length) return false;
+  return prefix.every((b, i) => bytes[offset + i] === b);
+}
+
+/** Checks that the leading magic bytes match the declared image MIME type. */
+export function matchesImageSignature(
+  type: string,
+  bytes: Uint8Array,
+): boolean {
+  switch (type) {
+    case "image/png":
+      return startsWith(
+        bytes,
+        [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a],
+      );
+    case "image/jpeg":
+      return startsWith(bytes, [0xff, 0xd8, 0xff]);
+    case "image/gif":
+      return (
+        startsWith(bytes, [0x47, 0x49, 0x46, 0x38, 0x37, 0x61]) ||
+        startsWith(bytes, [0x47, 0x49, 0x46, 0x38, 0x39, 0x61])
+      );
+    case "image/webp":
+      return (
+        startsWith(bytes, [0x52, 0x49, 0x46, 0x46]) &&
+        startsWith(bytes, [0x57, 0x45, 0x42, 0x50], 8)
+      );
+    case "image/avif":
+      return (
+        startsWith(bytes, [0x66, 0x74, 0x79, 0x70], 4) &&
+        (startsWith(bytes, [0x61, 0x76, 0x69, 0x66], 8) ||
+          startsWith(bytes, [0x61, 0x76, 0x69, 0x73], 8) ||
+          startsWith(bytes, [0x6d, 0x69, 0x66, 0x31], 8))
+      );
+    default:
+      return false;
+  }
+}
+
+function sanitizeImageFilename(
+  name: string,
+  type: (typeof IMAGE_TYPES)[number],
+): string {
+  const cleaned = name
+    .toLowerCase()
+    .replace(/[^a-z0-9.]+/g, "-")
+    .slice(-80);
+  if (!cleaned) return "image";
+  const dot = cleaned.lastIndexOf(".");
+  if (dot === -1) return cleaned;
+  const ext = cleaned.slice(dot + 1);
+  if (ALLOWED_IMAGE_EXTS.has(ext)) return cleaned;
+  const base = cleaned.slice(0, dot) || "image";
+  return `${base}.${IMAGE_EXT_BY_TYPE[type]}`;
+}
+
 /** Stores an image in Vercel Blob and returns its public URL. */
 export async function uploadImage(
   userId: string | null | undefined,
@@ -198,11 +272,19 @@ export async function uploadImage(
     if (file.size === 0 || file.size > MAX_IMAGE_BYTES) {
       return { ok: false, error: "Images must be under 4 MB." };
     }
-    const safeName = file.name
-      .toLowerCase()
-      .replace(/[^a-z0-9.]+/g, "-")
-      .slice(-80);
-    const blob = await put(`posts/${safeName || "image"}`, file.body, {
+    const buffer =
+      file.body instanceof Blob ? await file.body.arrayBuffer() : file.body;
+    if (!matchesImageSignature(file.type, new Uint8Array(buffer))) {
+      return {
+        ok: false,
+        error: "Upload a PNG, JPEG, WebP, GIF or AVIF image.",
+      };
+    }
+    const safeName = sanitizeImageFilename(
+      file.name,
+      file.type as (typeof IMAGE_TYPES)[number],
+    );
+    const blob = await put(`posts/${safeName}`, file.body, {
       access: "public",
       addRandomSuffix: true,
       contentType: file.type,
