@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import {
   isBlobUrl,
@@ -62,7 +62,16 @@ describe("PostBlocks", () => {
       "https://example.com/b.png",
     );
     expect(container.querySelectorAll("figcaption")).toHaveLength(1);
-    expect(screen.getByText("echo hi").tagName).toBe("CODE");
+    const code = container.querySelector("code");
+    expect(code).toHaveTextContent("echo hi");
+    expect(code?.querySelector('[data-token="keyword"]')).toHaveTextContent(
+      "echo",
+    );
     expect(screen.getByText("bash")).toBeInTheDocument();
+
+    const snippet = container.querySelector("[data-code-theme]");
+    expect(snippet).toHaveAttribute("data-code-theme", "midnight");
+    fireEvent.click(screen.getByRole("button", { name: "Dracula" }));
+    expect(snippet).toHaveAttribute("data-code-theme", "dracula");
   });
 });

@@ -83,6 +83,25 @@ describe("BlockEditor", () => {
     fireEvent.keyDown(code, { key: "Tab", shiftKey: true });
     fireEvent.keyDown(code, { key: "a" });
     expect(code).toHaveValue("a  b");
+
+    // Switching themes and picking a starter snippet updates the code block.
+    fireEvent.change(screen.getByLabelText("Theme for Code block 1"), {
+      target: { value: "aurora" },
+    });
+    expect(screen.getByLabelText("Theme for Code block 1")).toHaveValue(
+      "aurora",
+    );
+    fireEvent.change(
+      screen.getByLabelText("Starter snippet for Code block 1"),
+      {
+        target: { value: "0" },
+      },
+    );
+    expect(latest[0]).toMatchObject({
+      type: "code",
+      language: "typescript",
+    });
+    expect((latest[0] as { code: string }).code).toContain("fetchJson");
   });
 
   it("moves, duplicates, deletes and inserts between blocks", async () => {
