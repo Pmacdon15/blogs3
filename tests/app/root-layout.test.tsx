@@ -16,11 +16,14 @@ vi.mock("@/components/providers", () => ({
 vi.mock("@/components/offline-banner", () => ({
   OfflineBanner: () => <div data-testid="offline-banner" />,
 }));
+vi.mock("@/components/install-app-banner", () => ({
+  InstallAppBanner: () => <div data-testid="install-app-banner" />,
+}));
 
 import RootLayout, { metadata, viewport } from "@/app/layout";
 
 describe("RootLayout", () => {
-  it("wraps every page in the fonts, offline banner and client providers", () => {
+  it("wraps every page in the fonts, offline banner, install banner and client providers", () => {
     const html = renderToStaticMarkup(
       <RootLayout>
         <p>page body</p>
@@ -31,6 +34,9 @@ describe("RootLayout", () => {
     expect(doc.documentElement.className).toBe("inter-var mono-var");
     expect(doc.body.className).toContain("bg-canvas");
     expect(doc.querySelector('[data-testid="offline-banner"]')).not.toBeNull();
+    expect(
+      doc.querySelector('[data-testid="install-app-banner"]'),
+    ).not.toBeNull();
     expect(doc.querySelector('[data-testid="providers"]')?.textContent).toBe(
       "page body",
     );
