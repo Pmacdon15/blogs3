@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "blogs3",
+      "name": "blogs",
       "dependencies": {
         "@clerk/nextjs": "^7.10.4",
         "@modelcontextprotocol/server": "^2.4.0",

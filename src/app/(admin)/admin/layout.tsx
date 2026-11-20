@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { AdminSidebar } from "@/components/admin/admin-sidebar";
 
 export const metadata: Metadata = {
-  title: { default: "Studio", template: "%s · Studio · Blogs3" },
+  title: { default: "Studio", template: "%s · Studio · Blogs" },
   robots: { index: false, follow: false },
 };
 

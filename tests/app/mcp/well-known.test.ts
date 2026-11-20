@@ -46,7 +46,7 @@ describe("/.well-known/oauth-protected-resource", () => {
       authorization_servers: [ISSUER],
       scopes_supported: ["profile", "email", "offline_access"],
       bearer_methods_supported: ["header"],
-      resource_name: "Blogs3",
+      resource_name: "Blogs",
       resource_documentation: "https://blog.example.com/admin/mcp",
     });
   });

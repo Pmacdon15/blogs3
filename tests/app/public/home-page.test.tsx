@@ -30,7 +30,7 @@ describe("home page", () => {
 
   it("exports canonical home page SEO metadata", () => {
     expect(metadata).toMatchObject({
-      title: { absolute: "Blogs3" },
+      title: { absolute: "Blogs" },
       alternates: { canonical: "/" },
       openGraph: { type: "website", url: "/" },
       twitter: { card: "summary_large_image" },

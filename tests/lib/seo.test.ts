@@ -30,19 +30,19 @@ const samplePost: Post = {
 
 describe("site URL resolution", () => {
   it("prefers NEXT_PUBLIC_SITE_URL and strips any path", () => {
-    vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://blogs3.example.com/some/path/");
+    vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://blogs.example.com/some/path/");
     vi.stubEnv("VERCEL_PROJECT_PRODUCTION_URL", "prod.vercel.app");
-    expect(getSiteUrl().toString()).toBe("https://blogs3.example.com/");
+    expect(getSiteUrl().toString()).toBe("https://blogs.example.com/");
     expect(absoluteUrl("/blog/hello")).toBe(
-      "https://blogs3.example.com/blog/hello",
+      "https://blogs.example.com/blog/hello",
     );
-    expect(absoluteUrl()).toBe("https://blogs3.example.com/");
+    expect(absoluteUrl()).toBe("https://blogs.example.com/");
   });
 
   it("adds https:// when a configured host omits the scheme", () => {
     vi.stubEnv("NEXT_PUBLIC_SITE_URL", "  ");
-    vi.stubEnv("VERCEL_PROJECT_PRODUCTION_URL", "blogs3.vercel.app");
-    expect(getSiteUrl().toString()).toBe("https://blogs3.vercel.app/");
+    vi.stubEnv("VERCEL_PROJECT_PRODUCTION_URL", "blogs.vercel.app");
+    expect(getSiteUrl().toString()).toBe("https://blogs.vercel.app/");
   });
 
   it("falls back to VERCEL_URL and then localhost", () => {
@@ -66,41 +66,41 @@ describe("sitemap pagination helpers", () => {
   });
 
   it("builds absolute URLs for each blog sitemap chunk", () => {
-    vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://blogs3.example.com");
+    vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://blogs.example.com");
     expect(blogSitemapUrls(0)).toEqual([
-      "https://blogs3.example.com/blog/sitemap/0.xml",
+      "https://blogs.example.com/blog/sitemap/0.xml",
     ]);
     expect(blogSitemapUrls(25, 10)).toEqual([
-      "https://blogs3.example.com/blog/sitemap/0.xml",
-      "https://blogs3.example.com/blog/sitemap/1.xml",
-      "https://blogs3.example.com/blog/sitemap/2.xml",
+      "https://blogs.example.com/blog/sitemap/0.xml",
+      "https://blogs.example.com/blog/sitemap/1.xml",
+      "https://blogs.example.com/blog/sitemap/2.xml",
     ]);
   });
 });
 
 describe("JSON-LD builders", () => {
   it("builds WebSite schema", () => {
-    vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://blogs3.example.com");
+    vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://blogs.example.com");
     expect(websiteJsonLd()).toEqual({
       "@context": "https://schema.org",
       "@type": "WebSite",
       name: SITE_NAME,
       description: SITE_DESCRIPTION,
-      url: "https://blogs3.example.com/",
+      url: "https://blogs.example.com/",
     });
   });
 
   it("builds BlogPosting schema with optional fields populated or omitted", () => {
-    vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://blogs3.example.com");
+    vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://blogs.example.com");
     expect(blogPostingJsonLd(samplePost)).toEqual({
       "@context": "https://schema.org",
       "@type": "BlogPosting",
       headline: "Hello world",
       description: "A first post.",
-      url: "https://blogs3.example.com/blog/hello-world",
+      url: "https://blogs.example.com/blog/hello-world",
       mainEntityOfPage: {
         "@type": "WebPage",
-        "@id": "https://blogs3.example.com/blog/hello-world",
+        "@id": "https://blogs.example.com/blog/hello-world",
       },
       datePublished: "2026-11-19T10:00:00.000Z",
       dateModified: "2026-11-19T12:00:00.000Z",
@@ -109,7 +109,7 @@ describe("JSON-LD builders", () => {
       publisher: {
         "@type": "Organization",
         name: SITE_NAME,
-        url: "https://blogs3.example.com/",
+        url: "https://blogs.example.com/",
       },
     });
 

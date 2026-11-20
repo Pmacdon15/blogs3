@@ -27,7 +27,7 @@ export const CONNECT_GUIDES: ConnectGuide[] = [
       },
       {
         key: "claude-url",
-        body: "Name it Blogs3 and paste the MCP server URL above.",
+        body: "Name it Blogs and paste the MCP server URL above.",
       },
       {
         key: "claude-sign-in",
@@ -61,7 +61,7 @@ export const CONNECT_GUIDES: ConnectGuide[] = [
       },
       {
         key: "chatgpt-url",
-        body: "Name it Blogs3, paste the MCP server URL above and pick OAuth for authentication.",
+        body: "Name it Blogs, paste the MCP server URL above and pick OAuth for authentication.",
       },
       {
         key: "chatgpt-sign-in",
@@ -69,7 +69,7 @@ export const CONNECT_GUIDES: ConnectGuide[] = [
       },
       {
         key: "chatgpt-use",
-        body: "In a chat, pick Blogs3 from the tools menu. Posts show up as in-chat previews.",
+        body: "In a chat, pick Blogs from the tools menu. Posts show up as in-chat previews.",
       },
     ],
   },

@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 import type { Post } from "@/lib/types";
 
-export const SITE_NAME = "Blogs3";
+export const SITE_NAME = "Blogs";
 export const SITE_DESCRIPTION = "Notes, guides and ideas.";
 export const SITE_TAGLINE =
   "Practical write-ups on building for the web: what worked, what didn't, and the code to prove it.";

@@ -121,8 +121,8 @@ describe("/api/mcp", () => {
     const body = (await init.json()) as {
       result: { serverInfo: { name: string }; instructions: string };
     };
-    expect(body.result.serverInfo.name).toBe("blogs3");
-    expect(body.result.instructions).toMatch(/Blogs3/);
+    expect(body.result.serverInfo.name).toBe("blogs");
+    expect(body.result.instructions).toMatch(/Blogs/);
 
     const res = await rpc({
       jsonrpc: "2.0",

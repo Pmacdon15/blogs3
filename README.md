@@ -1,4 +1,4 @@
-# Blogs3
+# Blogs
 
 A blog with a public reading site, a private writing studio, and an MCP
 server so you can write and publish from an AI app (Claude, ChatGPT, ...).

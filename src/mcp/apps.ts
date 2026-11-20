@@ -29,7 +29,7 @@ export type BlogApp = {
 
 export const POST_PREVIEW_APP: BlogApp = {
   name: "post-preview-app",
-  uri: "ui://blogs3/post-preview.html",
+  uri: "ui://blogs/post-preview.html",
   title: "Post preview",
   description:
     "Preview of one blog post: its title, status, tags, excerpt, cover and every block (headings, text, images and code), as it will read on the blog.",
@@ -40,7 +40,7 @@ export const POST_PREVIEW_APP: BlogApp = {
 
 export const POSTS_LIST_APP: BlogApp = {
   name: "posts-list-app",
-  uri: "ui://blogs3/posts-list.html",
+  uri: "ui://blogs/posts-list.html",
   title: "Posts",
   description:
     "List of blog posts with draft/published badges, tags and dates. Selecting a post opens its preview.",

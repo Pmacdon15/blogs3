@@ -27,7 +27,7 @@ vi.mock("next/og", () => ({
 import { renderBrandIcon } from "@/lib/pwa-icon";
 
 describe("renderBrandIcon", () => {
-  it("renders a rounded gradient B3 tile by default", () => {
+  it("renders a rounded gradient B tile by default", () => {
     mocks.imageResponseCalls.length = 0;
     const response = renderBrandIcon({ width: 192, height: 192 });
     expect(response.headers.get("content-type")).toBe("image/png");
