@@ -1,5 +1,4 @@
 import type { AuthInfo } from "@modelcontextprotocol/server";
-import { getPublicOrigin } from "mcp-handler";
 import { MCP_SCOPES } from "@/mcp/oauth-config";
 
 export { MCP_SCOPES };
@@ -36,7 +35,11 @@ export function publicOrigin(req: Request) {
   if (process.env.VERCEL_ENV === "production" && productionHost) {
     return `https://${productionHost.replace(/^https?:\/\//, "").replace(/\/+$/, "")}`;
   }
-  return getPublicOrigin(req);
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  if (siteUrl) {
+    return new URL(siteUrl).origin;
+  }
+  return new URL(req.url).origin;
 }
 
 /** The canonical URL of the MCP server, as clients connect to it. */
