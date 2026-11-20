@@ -5,6 +5,9 @@ const nextConfig: NextConfig = {
   typedRoutes: true,
   cacheComponents: true,
   partialPrefetching: true,
+  experimental: {
+    useOffline: true,
+  },
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "*.public.blob.vercel-storage.com" },

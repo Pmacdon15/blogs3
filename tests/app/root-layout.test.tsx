@@ -13,11 +13,14 @@ vi.mock("@/components/providers", () => ({
     <div data-testid="providers">{children}</div>
   ),
 }));
+vi.mock("@/components/offline-banner", () => ({
+  OfflineBanner: () => <div data-testid="offline-banner" />,
+}));
 
 import RootLayout, { metadata, viewport } from "@/app/layout";
 
 describe("RootLayout", () => {
-  it("wraps every page in the fonts and client providers", () => {
+  it("wraps every page in the fonts, offline banner and client providers", () => {
     const html = renderToStaticMarkup(
       <RootLayout>
         <p>page body</p>
@@ -27,16 +30,26 @@ describe("RootLayout", () => {
     expect(doc.documentElement.getAttribute("lang")).toBe("en");
     expect(doc.documentElement.className).toBe("inter-var mono-var");
     expect(doc.body.className).toContain("bg-canvas");
+    expect(doc.querySelector('[data-testid="offline-banner"]')).not.toBeNull();
     expect(doc.querySelector('[data-testid="providers"]')?.textContent).toBe(
       "page body",
     );
   });
 
-  it("describes the site", () => {
+  it("describes the site and PWA metadata", () => {
     expect(metadata).toMatchObject({
       metadataBase: expect.any(URL),
+      applicationName: "Blogs3",
       title: { default: "Blogs3", template: "%s · Blogs3" },
       description: "Notes, guides and ideas.",
+      appleWebApp: {
+        capable: true,
+        title: "Blogs3",
+        statusBarStyle: "default",
+      },
+      formatDetection: {
+        telephone: false,
+      },
       openGraph: {
         type: "website",
         siteName: "Blogs3",
