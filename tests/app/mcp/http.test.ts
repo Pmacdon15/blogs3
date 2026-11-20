@@ -102,6 +102,30 @@ describe("CORS", () => {
     expect(res.headers.get("Access-Control-Allow-Headers")).toBe("x-custom");
     expect(res.headers.get("Vary")).toBe("Access-Control-Request-Headers");
   });
+
+  it("ignores malformed or oversized requested headers in preflight", () => {
+    const badChars = preflight(
+      new Request(URL_, {
+        method: "OPTIONS",
+        headers: { "access-control-request-headers": "x-custom; evil=1" },
+      }),
+    );
+    expect(badChars.headers.get("Access-Control-Allow-Headers")).toBe(
+      MCP_CORS_HEADERS["Access-Control-Allow-Headers"],
+    );
+    expect(badChars.headers.get("Vary")).toBeNull();
+
+    const oversized = preflight(
+      new Request(URL_, {
+        method: "OPTIONS",
+        headers: { "access-control-request-headers": "x".repeat(513) },
+      }),
+    );
+    expect(oversized.headers.get("Access-Control-Allow-Headers")).toBe(
+      MCP_CORS_HEADERS["Access-Control-Allow-Headers"],
+    );
+    expect(oversized.headers.get("Vary")).toBeNull();
+  });
 });
 
 describe("unauthorized", () => {
