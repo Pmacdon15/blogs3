@@ -242,7 +242,7 @@ const SCRIPT = `
     if (b.type === "image") {
       var src = safeImage(b.url);
       return h("figure", null, [
-        src ? h("img", { src: src, alt: b.alt || "", loading: "lazy" }) : h("div", { class: "muted" }, ["(image)"]),
+        src ? h("img", { src: src, alt: b.alt || "", loading: "lazy", referrerpolicy: "no-referrer" }) : h("div", { class: "muted" }, ["(image)"]),
         b.caption ? h("figcaption", null, [b.caption]) : null
       ]);
     }
@@ -268,7 +268,7 @@ const SCRIPT = `
       h("h1", null, [p.title]),
       p.excerpt ? h("p", { class: "excerpt" }, [p.excerpt]) : null,
       tagList(p.tags),
-      cover ? h("img", { class: "cover", src: cover, alt: "" }) : null,
+      cover ? h("img", { class: "cover", src: cover, alt: "", referrerpolicy: "no-referrer" }) : null,
       h("article", null, blocks.length ? blocks.map(block) : [h("div", { class: "empty-state" }, ["No content yet."])]),
       h("div", { class: "toolbar" }, [
         p.status === "published"
@@ -332,6 +332,7 @@ export function blogAppHtml(view: BlogAppView) {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src https:; style-src 'unsafe-inline'; script-src 'unsafe-inline'">
 <title>${TITLES[view]}</title>
 <style>${STYLES}</style>
 </head>
