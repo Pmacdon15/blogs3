@@ -665,8 +665,13 @@ describe("upload_image", () => {
     expect(uploaded().name).toBe("mine.png");
     expect(uploaded().type).toBe("");
     m.uploadImage.mockClear();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(null)),
+    );
     await uploadImage(USER, { url: "https://img.example.com/" });
     expect(uploaded().name).toBe("image");
+    expect(uploaded().size).toBe(0);
   });
 
   it("reports download failures", async () => {
@@ -701,6 +706,30 @@ describe("upload_image", () => {
       (await uploadImage(USER, { url: "https://img.example.com/a.png" }))
         .summary,
     ).toBe("Images must be under 4 MB.");
+
+    let cancelled = false;
+    const oversizedStream = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        controller.enqueue(new Uint8Array(3 * 1024 * 1024));
+      },
+      cancel() {
+        cancelled = true;
+      },
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(oversizedStream, {
+            headers: { "content-type": "image/png" },
+          }),
+      ),
+    );
+    expect(
+      (await uploadImage(USER, { url: "https://img.example.com/a.png" }))
+        .summary,
+    ).toBe("Images must be under 4 MB.");
+    expect(cancelled).toBe(true);
     expect(m.uploadImage).not.toHaveBeenCalled();
   });
 
