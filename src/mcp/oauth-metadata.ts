@@ -14,6 +14,7 @@ export const METADATA_CORS_HEADERS: Record<string, string> = {
   "Access-Control-Allow-Methods": "GET, OPTIONS",
   "Access-Control-Allow-Headers": "*",
   "Access-Control-Max-Age": "86400",
+  "X-Content-Type-Options": "nosniff",
 };
 
 /** CORS preflight for the discovery documents, which browser-based clients fetch too. */
@@ -56,6 +57,7 @@ export async function clerkDiscoveryDocument(
 ) {
   try {
     const res = await fetch(`${issuer}/.well-known/${document}`, {
+      redirect: "error",
       signal: AbortSignal.timeout(10_000),
       headers: { accept: "application/json" },
     });

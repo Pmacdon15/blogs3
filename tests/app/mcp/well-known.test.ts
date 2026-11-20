@@ -21,8 +21,12 @@ describe("Clerk issuer", () => {
   it("decodes the Frontend API host from the publishable key", () => {
     expect(clerkIssuer(KEY)).toBe(ISSUER);
     expect(clerkIssuer(KEY.replace("pk_test_", "pk_live_"))).toBe(ISSUER);
+    // "a?>.example.com$" contains byte values that produce "+" and "/" in base64;
+    // rejects non-hostname characters, while valid hosts via URL-safe base64 work.
     const urlSafe = `pk_test_${btoa("a?>.example.com$").replace(/\+/g, "-").replace(/\//g, "_")}`;
-    expect(clerkIssuer(urlSafe)).toBe("https://a?>.example.com");
+    expect(clerkIssuer(urlSafe)).toBeNull();
+    expect(clerkIssuer(`pk_test_${btoa("bad..example.com$")}`)).toBeNull();
+    expect(clerkIssuer("pk_test_!!!")).toBeNull();
   });
 
   it("is null without a publishable key", () => {
@@ -82,10 +86,14 @@ describe.each([
     const res = await route.GET();
     expect(fetchMock).toHaveBeenCalledWith(
       `${ISSUER}/.well-known/${document}`,
-      expect.objectContaining({ headers: { accept: "application/json" } }),
+      expect.objectContaining({
+        redirect: "error",
+        headers: { accept: "application/json" },
+      }),
     );
     expect(res.status).toBe(200);
     expect(res.headers.get("Cache-Control")).toBe("max-age=3600");
+    expect(res.headers.get("X-Content-Type-Options")).toBe("nosniff");
     await expect(res.json()).resolves.toMatchObject({ issuer: ISSUER });
   });
 
