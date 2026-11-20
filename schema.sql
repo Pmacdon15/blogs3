@@ -1,4 +1,4 @@
--- Blogs3 schema. Idempotent: safe to run on every deploy or CI build.
+-- Blogs schema. Idempotent: safe to run on every deploy or CI build.
 create extension if not exists pgcrypto;
 
 create table if not exists posts (

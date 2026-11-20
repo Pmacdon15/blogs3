@@ -3,7 +3,7 @@
  * `initialize` handshake.
  */
 
-export const MCP_INSTRUCTIONS = `You are connected to Blogs3, the user's blog. Everything the blog's admin editor can do is available here as a tool.
+export const MCP_INSTRUCTIONS = `You are connected to Blogs, the user's blog. Everything the blog's admin editor can do is available here as a tool.
 
 Who can do what:
 - Call whoami first if you are unsure whether the user is an admin. Only admins can list, read drafts, create, edit, publish, unpublish or delete posts and upload images. Anyone signed in can search published posts (search_published_posts).

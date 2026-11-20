@@ -1,4 +1,4 @@
-# Blogs3 — agent rules
+# Blogs — agent rules
 
 Read `node_modules/next/dist/docs/` for this Next.js version before writing code.
 

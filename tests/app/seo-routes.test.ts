@@ -25,7 +25,7 @@ import rootSitemap from "@/app/sitemap";
 
 describe("SEO metadata routes", () => {
   beforeEach(() => {
-    vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://blogs3.example.com");
+    vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://blogs.example.com");
     mocks.dbCountPublishedPosts.mockResolvedValue(2);
     mocks.dbLatestPublishedPostUpdatedAt.mockResolvedValue(
       "2026-11-19T12:00:00.000Z",
@@ -51,7 +51,7 @@ describe("SEO metadata routes", () => {
       expect(mocks.cacheTag).toHaveBeenCalledWith("posts:published");
       expect(entries).toEqual([
         {
-          url: "https://blogs3.example.com/",
+          url: "https://blogs.example.com/",
           lastModified: "2026-11-19T12:00:00.000Z",
           changeFrequency: "daily",
           priority: 1,
@@ -87,14 +87,14 @@ describe("SEO metadata routes", () => {
       expect(mocks.cacheTag).toHaveBeenCalledWith("posts:published");
       expect(entries).toEqual([
         {
-          url: "https://blogs3.example.com/blog/first-post",
+          url: "https://blogs.example.com/blog/first-post",
           lastModified: "2026-11-19T12:00:00.000Z",
           changeFrequency: "weekly",
           priority: 0.8,
           images: ["https://example.com/cover.png"],
         },
         {
-          url: "https://blogs3.example.com/blog/second-post",
+          url: "https://blogs.example.com/blog/second-post",
           lastModified: "2026-11-18T10:00:00.000Z",
           changeFrequency: "weekly",
           priority: 0.8,
@@ -127,11 +127,11 @@ describe("SEO metadata routes", () => {
           disallow: ["/admin", "/api/", "/sign-in", "/sign-up", "/shell-check"],
         },
         sitemap: [
-          "https://blogs3.example.com/sitemap.xml",
-          "https://blogs3.example.com/blog/sitemap/0.xml",
-          "https://blogs3.example.com/blog/sitemap/1.xml",
+          "https://blogs.example.com/sitemap.xml",
+          "https://blogs.example.com/blog/sitemap/0.xml",
+          "https://blogs.example.com/blog/sitemap/1.xml",
         ],
-        host: "https://blogs3.example.com",
+        host: "https://blogs.example.com",
       });
     });
   });

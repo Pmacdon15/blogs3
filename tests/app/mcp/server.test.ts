@@ -298,7 +298,7 @@ describe("MCP Apps resources", () => {
       resources: { uri: string; mimeType: string; _meta?: unknown }[];
     };
     expect(resources.map((r) => r.uri).sort()).toEqual(
-      ["ui://blogs3/post-preview.html", "ui://blogs3/posts-list.html"].sort(),
+      ["ui://blogs/post-preview.html", "ui://blogs/posts-list.html"].sort(),
     );
     for (const r of resources) {
       expect(r.mimeType).toBe(MCP_APP_MIME_TYPE);
@@ -465,7 +465,7 @@ describe("run", () => {
 describe("server info, instructions and prompts", () => {
   it("advertises fixed lists and the blog's name", () => {
     expect(SERVER_OPTIONS.serverInfo).toBe(SERVER_INFO);
-    expect(SERVER_INFO.name).toBe("blogs3");
+    expect(SERVER_INFO.name).toBe("blogs");
     expect(SERVER_OPTIONS.capabilities).toEqual({
       tools: { listChanged: false },
       prompts: { listChanged: false },

@@ -39,12 +39,12 @@ describe("RootLayout", () => {
   it("describes the site and PWA metadata", () => {
     expect(metadata).toMatchObject({
       metadataBase: expect.any(URL),
-      applicationName: "Blogs3",
-      title: { default: "Blogs3", template: "%s · Blogs3" },
+      applicationName: "Blogs",
+      title: { default: "Blogs", template: "%s · Blogs" },
       description: "Notes, guides and ideas.",
       appleWebApp: {
         capable: true,
-        title: "Blogs3",
+        title: "Blogs",
         statusBarStyle: "default",
       },
       formatDetection: {
@@ -52,15 +52,15 @@ describe("RootLayout", () => {
       },
       openGraph: {
         type: "website",
-        siteName: "Blogs3",
-        title: "Blogs3",
+        siteName: "Blogs",
+        title: "Blogs",
         description: "Notes, guides and ideas.",
         locale: "en_US",
         url: "/",
       },
       twitter: {
         card: "summary_large_image",
-        title: "Blogs3",
+        title: "Blogs",
         description: "Notes, guides and ideas.",
       },
       robots: {

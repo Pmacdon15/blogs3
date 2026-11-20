@@ -6,7 +6,7 @@ export type BrandMarkSize = {
 };
 
 /**
- * Generates a PNG brand icon ("B3" on the blue gradient tile, matching Logo)
+ * Generates a PNG brand icon ("B" on the blue gradient tile, matching Logo)
  * for favicons, Apple touch icons, and PWA home-screen icons.
  */
 export function renderBrandIcon(
@@ -34,7 +34,7 @@ export function renderBrandIcon(
         letterSpacing: "-0.04em",
       }}
     >
-      B3
+      B
     </div>,
     { width, height },
   );

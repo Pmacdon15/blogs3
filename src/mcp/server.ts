@@ -51,8 +51,8 @@ import {
  */
 
 export const SERVER_INFO = {
-  name: "blogs3",
-  title: "Blogs3",
+  name: "blogs",
+  title: "Blogs",
   version: "1.0.0",
 };
 

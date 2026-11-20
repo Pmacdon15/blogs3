@@ -53,7 +53,7 @@ describe("origins and URLs", () => {
   it("always uses the production domain in production", () => {
     vi.stubEnv("VERCEL_ENV", "production");
     vi.stubEnv("VERCEL_PROJECT_PRODUCTION_URL", "https://blog.example.org/");
-    const req = new Request("https://blogs3-abc.vercel.app/api/mcp");
+    const req = new Request("https://blogs-abc.vercel.app/api/mcp");
     expect(publicOrigin(req)).toBe("https://blog.example.org");
   });
 

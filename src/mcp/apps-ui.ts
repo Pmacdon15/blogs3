@@ -178,7 +178,7 @@ const SCRIPT = `
       render();
       request("ui/initialize", {
         protocolVersion: "2026-01-26",
-        appInfo: { name: "blogs3-" + VIEW, version: "1.0.0" },
+        appInfo: { name: "blogs-" + VIEW, version: "1.0.0" },
         appCapabilities: {}
       }).then(function (res) {
         applyHostContext(res && res.hostContext);

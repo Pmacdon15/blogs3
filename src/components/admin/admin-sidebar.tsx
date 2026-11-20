@@ -70,7 +70,7 @@ export function AdminSidebar() {
           >
             B
           </span>
-          Blogs3
+          Blogs
           <span className="rounded bg-white/10 px-1.5 py-0.5 font-medium text-[10px] text-brand-200 uppercase tracking-wider">
             Studio
           </span>

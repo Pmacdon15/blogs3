@@ -7,7 +7,7 @@ import { SiteHeader } from "@/components/blog/site-header";
 describe("Logo", () => {
   it("links home", () => {
     render(<Logo />);
-    expect(screen.getByRole("link", { name: "Blogs3 home" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Blogs home" })).toHaveAttribute(
       "href",
       "/",
     );
