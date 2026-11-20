@@ -146,6 +146,7 @@ export const updateBlockInputSchema = z.object({
       url: z.string().optional(),
       alt: z.string().optional(),
       caption: z.string().optional(),
+      width: imageBlockSchema.shape.width,
       language: z.enum(CODE_LANGUAGES).optional(),
       code: z.string().optional(),
     })

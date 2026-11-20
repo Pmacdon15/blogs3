@@ -56,6 +56,9 @@ describe("BlockEditor", () => {
     await user.type(screen.getByLabelText("Image"), "https://img/a.png");
     await user.type(screen.getByLabelText("Alt text"), "A cat");
     await user.type(screen.getByLabelText("Caption"), "Cute");
+    fireEvent.keyDown(screen.getByLabelText("Resize image right"), {
+      key: "ArrowLeft",
+    });
     await user.selectOptions(
       screen.getByLabelText("Language for Code block 4"),
       "bash",
@@ -64,7 +67,7 @@ describe("BlockEditor", () => {
     expect(latest).toMatchObject([
       { text: "Intro" },
       { text: "Hello" },
-      { url: "https://img/a.png", alt: "A cat", caption: "Cute" },
+      { url: "https://img/a.png", alt: "A cat", caption: "Cute", width: 95 },
       { language: "bash", code: "ls" },
     ]);
   });

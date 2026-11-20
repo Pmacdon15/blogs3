@@ -407,7 +407,9 @@ function BlockFields({
             error={errorFor(errors, `${prefix}.url`)}
             label="Image"
             onChange={(url) => onChange({ ...block, url })}
+            onWidthChange={(width) => onChange({ ...block, width })}
             value={block.url}
+            width={block.width}
           />
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
