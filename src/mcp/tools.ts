@@ -541,16 +541,20 @@ export async function deletePost(
 
 type ImageFile = { name: string; type: string; size: number; body: Blob };
 
+const BLOCKED_HOST_SUFFIX =
+  /(?:^|\.)(localhost|local|internal|lan|home|corp|home\.arpa|localtest\.me|nip\.io|sslip\.io|xip\.io|invalid|test|example)$/;
+
 /**
  * Whether a URL's host may be fetched: a public DNS name, never localhost,
- * an internal name or an IP literal, so the server can't be pointed at its
- * own network.
+ * an internal/rebinding name or an IP literal (dotted, hex, octal or IPv6),
+ * so the server can't be pointed at its own network.
  */
 export function isFetchableHost(hostname: string) {
-  const host = hostname.toLowerCase();
+  const host = hostname.toLowerCase().replace(/\.+$/, "");
   if (!host.includes(".") || host.includes(":")) return false;
-  if (/^\d+(\.\d+){3}$/.test(host)) return false;
-  return !/\.(localhost|local|internal|lan|home|corp)$/.test(host);
+  const lastLabel = host.slice(host.lastIndexOf(".") + 1);
+  if (/^(?:\d+|0x[0-9a-f]+)$/.test(lastLabel)) return false;
+  return !BLOCKED_HOST_SUFFIX.test(host);
 }
 
 const tooBig = { error: "Images must be under 4 MB." };

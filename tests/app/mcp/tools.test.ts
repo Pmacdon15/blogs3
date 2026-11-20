@@ -738,9 +738,15 @@ describe("upload_image", () => {
     vi.stubGlobal("fetch", fetchMock);
     for (const url of [
       "https://localhost/a.png",
+      "https://localhost./a.png",
       "https://127.0.0.1/a.png",
+      "https://127.0.0.1./a.png",
+      "https://127.1/a.png",
+      "https://0x7f.0x1/a.png",
       "https://[::1]/a.png",
       "https://db.internal/a.png",
+      "https://127.0.0.1.nip.io/a.png",
+      "https://localtest.me/a.png",
     ]) {
       expect((await uploadImage(USER, { url })).summary).toMatch(
         /can't be reached/,
@@ -788,9 +794,25 @@ describe("upload_image", () => {
 describe("helpers", () => {
   it("knows which hosts may be fetched", () => {
     expect(isFetchableHost("images.example.com")).toBe(true);
+    expect(isFetchableHost("images.example.com.")).toBe(true);
     expect(isFetchableHost("intranet")).toBe(false);
     expect(isFetchableHost("printer.local")).toBe(false);
+    expect(isFetchableHost("printer.local.")).toBe(false);
+    expect(isFetchableHost("printer.home.arpa")).toBe(false);
     expect(isFetchableHost("10.0.0.1")).toBe(false);
+    expect(isFetchableHost("10.0.0.1.")).toBe(false);
+    expect(isFetchableHost("127.1")).toBe(false);
+    expect(isFetchableHost("0177.0.0.01")).toBe(false);
+    expect(isFetchableHost("127.0.0.0x1")).toBe(false);
+    expect(isFetchableHost("0x7f000001")).toBe(false);
+    expect(isFetchableHost("127.0.0.1.nip.io")).toBe(false);
+    expect(isFetchableHost("127-0-0-1.sslip.io")).toBe(false);
+    expect(isFetchableHost("127.0.0.1.xip.io")).toBe(false);
+    expect(isFetchableHost("sub.localtest.me")).toBe(false);
+    expect(isFetchableHost("localtest.me")).toBe(false);
+    expect(isFetchableHost("foo.invalid")).toBe(false);
+    expect(isFetchableHost("foo.test")).toBe(false);
+    expect(isFetchableHost("foo.example")).toBe(false);
   });
 
   it("links a post to its public page and editor", () => {
