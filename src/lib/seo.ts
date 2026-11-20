@@ -5,6 +5,8 @@ export const SITE_NAME = "Blogs3";
 export const SITE_DESCRIPTION = "Notes, guides and ideas.";
 export const SITE_TAGLINE =
   "Practical write-ups on building for the web: what worked, what didn't, and the code to prove it.";
+export const SITE_THEME_COLOR = "#2563eb";
+export const SITE_BACKGROUND_COLOR = "#f8faff";
 
 /** Google's protocol limit per sitemap file. */
 export const SITEMAP_PAGE_SIZE = 50_000;
