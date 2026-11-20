@@ -2,10 +2,13 @@ import { describe, expect, it } from "vitest";
 import {
   blockSchema,
   CODE_LANGUAGES,
+  clampImageWidth,
   IMAGE_TYPES,
   MAX_BLOCKS,
   MAX_IMAGE_BYTES,
+  MAX_IMAGE_WIDTH,
   MAX_TAGS,
+  MIN_IMAGE_WIDTH,
   postIdSchema,
   postInputSchema,
   postPatchSchema,
@@ -41,6 +44,23 @@ describe("blockSchema", () => {
       url: "https://example.com/a.png",
       alt: "",
     });
+    expect(
+      blockSchema.parse({
+        id: "i2",
+        type: "image",
+        url: "https://example.com/a.png",
+        width: 60,
+      }),
+    ).toEqual({
+      id: "i2",
+      type: "image",
+      url: "https://example.com/a.png",
+      alt: "",
+      width: 60,
+    });
+    expect(clampImageWidth(5)).toBe(MIN_IMAGE_WIDTH);
+    expect(clampImageWidth(150)).toBe(MAX_IMAGE_WIDTH);
+    expect(clampImageWidth(64.6)).toBe(65);
     expect(blockSchema.parse({ id: "c", type: "code", code: "  x  " })).toEqual(
       { id: "c", type: "code", language: "plaintext", code: "  x  " },
     );

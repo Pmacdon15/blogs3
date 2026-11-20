@@ -26,6 +26,15 @@ export const CODE_LANGUAGES = [
 
 export const MAX_BLOCKS = 200;
 export const MAX_TAGS = 10;
+export const MIN_IMAGE_WIDTH = 20;
+export const MAX_IMAGE_WIDTH = 100;
+
+export function clampImageWidth(width: number) {
+  return Math.min(
+    MAX_IMAGE_WIDTH,
+    Math.max(MIN_IMAGE_WIDTH, Math.round(width)),
+  );
+}
 
 const blockId = z.string().trim().min(1).max(64);
 
@@ -47,6 +56,7 @@ export const imageBlockSchema = z.object({
   url: z.url({ protocol: /^https$/, message: "Image must be an https URL" }),
   alt: z.string().trim().max(300).default(""),
   caption: z.string().trim().max(300).optional(),
+  width: z.number().int().min(MIN_IMAGE_WIDTH).max(MAX_IMAGE_WIDTH).optional(),
 });
 
 export const codeBlockSchema = z.object({

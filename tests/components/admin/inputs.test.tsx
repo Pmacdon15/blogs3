@@ -23,6 +23,7 @@ import {
   ImageUpload,
   imageFileProblem,
   isHttpsUrl,
+  resizedWidth,
 } from "@/components/admin/image-upload";
 import { addTag, TagsInput } from "@/components/admin/tags-input";
 import { renderWithClient } from "./utils";
@@ -85,6 +86,20 @@ function Picker({ initial = "", error }: { initial?: string; error?: string }) {
       label="Cover image"
       onChange={setUrl}
       value={url}
+    />
+  );
+}
+
+function ResizablePicker() {
+  const [url, setUrl] = useState("https://img.example/a.png");
+  const [width, setWidth] = useState<number | undefined>(undefined);
+  return (
+    <ImageUpload
+      label="Image"
+      onChange={setUrl}
+      onWidthChange={setWidth}
+      value={url}
+      width={width}
     />
   );
 }
@@ -175,5 +190,41 @@ describe("ImageUpload", () => {
     expect(
       await screen.findByRole("button", { name: "Uploading…" }),
     ).toBeDisabled();
+  });
+
+  it("resizes the image preview via drag handles, keyboard and double-click", () => {
+    expect(resizedWidth(80, -100, 400)).toBe(55);
+    expect(resizedWidth(80, -100, 0)).toBe(60);
+
+    renderWithClient(<ResizablePicker />);
+    const box = screen.getByTestId("image-preview-box");
+    expect(box).toHaveStyle({ width: "100%" });
+
+    const rightHandle = screen.getByLabelText("Resize image right");
+    const leftHandle = screen.getByLabelText("Resize image left");
+
+    // Drag right handle left by 100px (default 500px fallback in jsdom -> -20%).
+    fireEvent.pointerDown(rightHandle, { clientX: 300 });
+    fireEvent.pointerMove(window, { clientX: 200 });
+    fireEvent.pointerUp(window);
+    expect(box).toHaveStyle({ width: "80%" });
+
+    // Drag left handle right by 50px (-10%).
+    fireEvent.pointerDown(leftHandle, { clientX: 100 });
+    fireEvent.pointerMove(window, { clientX: 150 });
+    fireEvent.pointerUp(window);
+    expect(box).toHaveStyle({ width: "70%" });
+
+    // Keyboard ArrowLeft / ArrowRight and ignored key.
+    fireEvent.keyDown(rightHandle, { key: "ArrowLeft" });
+    expect(box).toHaveStyle({ width: "65%" });
+    fireEvent.keyDown(rightHandle, { key: "ArrowRight" });
+    expect(box).toHaveStyle({ width: "70%" });
+    fireEvent.keyDown(rightHandle, { key: "Enter" });
+    expect(box).toHaveStyle({ width: "70%" });
+
+    // Double-click resets to 100%.
+    fireEvent.doubleClick(rightHandle);
+    expect(box).toHaveStyle({ width: "100%" });
   });
 });

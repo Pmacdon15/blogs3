@@ -43,6 +43,7 @@ describe("PostBlocks", () => {
             type: "image",
             url: "https://example.com/b.png",
             alt: "Other",
+            width: 60,
           },
           { id: "c1", type: "code", language: "bash", code: "echo hi" },
         ]}
@@ -61,6 +62,9 @@ describe("PostBlocks", () => {
       "src",
       "https://example.com/b.png",
     );
+    expect(
+      screen.getByRole("img", { name: "Other" }).closest("figure"),
+    ).toHaveStyle({ width: "60%" });
     expect(container.querySelectorAll("figcaption")).toHaveLength(1);
     const code = container.querySelector("code");
     expect(code).toHaveTextContent("echo hi");

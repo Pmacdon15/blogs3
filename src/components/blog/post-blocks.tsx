@@ -48,9 +48,13 @@ export function PostBlock({ block }: { block: Block }) {
           ))}
         </>
       );
-    case "image":
+    case "image": {
+      const resized = block.width !== undefined && block.width < 100;
       return (
-        <figure>
+        <figure
+          className={resized ? "mx-auto" : undefined}
+          style={resized ? { width: `${block.width}%` } : undefined}
+        >
           <Image
             alt={block.alt}
             className="h-auto w-full rounded-2xl border border-line"
@@ -65,6 +69,7 @@ export function PostBlock({ block }: { block: Block }) {
           ) : null}
         </figure>
       );
+    }
     case "code":
       return <CodeSnippet code={block.code} language={block.language} />;
   }
