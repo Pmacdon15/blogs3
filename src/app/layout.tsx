@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
+import { InstallAppBanner } from "@/components/install-app-banner";
 import { OfflineBanner } from "@/components/offline-banner";
 import { Providers } from "@/components/providers";
 import {
@@ -59,6 +60,7 @@ export default function RootLayout({
       <body className="min-h-dvh bg-canvas font-sans text-ink">
         <Providers>
           <OfflineBanner />
+          <InstallAppBanner />
           {children}
         </Providers>
       </body>
