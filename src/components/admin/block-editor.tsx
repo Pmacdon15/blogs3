@@ -5,6 +5,7 @@ import {
   ArrowUp,
   Code2,
   Copy,
+  GripVertical,
   Heading2,
   Image as ImageIcon,
   Plus,
@@ -12,6 +13,7 @@ import {
   Type,
 } from "lucide-react";
 import {
+  type DragEvent,
   type KeyboardEvent,
   useId,
   useLayoutEffect,
@@ -27,6 +29,7 @@ import {
   moveBlock,
   newBlock,
   removeBlock,
+  reorderBlock,
   replaceBlock,
 } from "@/components/admin/blocks";
 import {
@@ -69,9 +72,16 @@ export function BlockEditor({
   onChange: (blocks: Block[]) => void;
   errors: FieldErrors;
 }) {
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [dropTargetIndex, setDropTargetIndex] = useState<number | null>(null);
   const full = blocks.length >= MAX_BLOCKS;
   const add = (index: number, type: BlockType) =>
     onChange(insertBlock(blocks, index, newBlock(type)));
+
+  function handleDragEnd() {
+    setDragIndex(null);
+    setDropTargetIndex(null);
+  }
 
   return (
     <section aria-label="Content" className="flex flex-col gap-3">
@@ -106,7 +116,24 @@ export function BlockEditor({
 
       <ol className="flex flex-col">
         {blocks.map((block, index) => (
-          <li key={block.id}>
+          <li
+            key={block.id}
+            onDragOver={(event) => {
+              if (dragIndex === null) return;
+              event.preventDefault();
+              if (dropTargetIndex !== index) {
+                setDropTargetIndex(index);
+              }
+            }}
+            onDrop={(event) => {
+              if (dragIndex === null) return;
+              event.preventDefault();
+              if (dragIndex !== index) {
+                onChange(reorderBlock(blocks, dragIndex, index));
+              }
+              handleDragEnd();
+            }}
+          >
             {index > 0 ? (
               <InsertMenu
                 disabled={full}
@@ -116,14 +143,25 @@ export function BlockEditor({
             ) : null}
             <BlockCard
               block={block}
+              canDuplicate={!full}
               count={blocks.length}
               errors={errors}
               index={index}
+              isDragging={dragIndex === index}
+              isDropTarget={
+                dropTargetIndex === index &&
+                dragIndex !== null &&
+                dragIndex !== index
+              }
               onChange={(next) => onChange(replaceBlock(blocks, index, next))}
               onDelete={() => onChange(removeBlock(blocks, index))}
+              onDragEnd={handleDragEnd}
+              onDragStart={(event) => {
+                setDragIndex(index);
+                event.dataTransfer?.setData("text/plain", String(index));
+              }}
               onDuplicate={() => onChange(duplicateBlock(blocks, index))}
               onMove={(by) => onChange(moveBlock(blocks, index, by))}
-              canDuplicate={!full}
             />
           </li>
         ))}
@@ -202,6 +240,10 @@ function BlockCard({
   onDuplicate,
   onDelete,
   canDuplicate,
+  isDragging,
+  isDropTarget,
+  onDragStart,
+  onDragEnd,
 }: {
   block: Block;
   index: number;
@@ -212,18 +254,40 @@ function BlockCard({
   onDuplicate: () => void;
   onDelete: () => void;
   canDuplicate: boolean;
+  isDragging: boolean;
+  isDropTarget: boolean;
+  onDragStart: (event: DragEvent<HTMLButtonElement>) => void;
+  onDragEnd: () => void;
 }) {
   const Icon = ICONS[block.type];
   const label = `${BLOCK_LABELS[block.type]} block ${index + 1}`;
   const prefix = `blocks.${index}`;
 
   return (
-    <div className="group/block rounded-xl border border-line bg-surface shadow-xs transition-shadow focus-within:border-brand-300 focus-within:shadow-(--shadow-card)">
+    <div
+      className={cn(
+        "group/block rounded-xl border border-line bg-surface shadow-xs transition-shadow focus-within:border-brand-300 focus-within:shadow-(--shadow-card)",
+        isDragging && "opacity-50",
+        isDropTarget && "border-brand-400 ring-2 ring-brand-200",
+      )}
+    >
       <div className="flex items-center justify-between gap-2 border-line border-b px-3 py-1.5">
-        <span className="inline-flex items-center gap-1.5 font-medium text-muted text-xs uppercase tracking-wide">
-          <Icon aria-hidden="true" className="size-3.5" />
-          {BLOCK_LABELS[block.type]}
-        </span>
+        <div className="flex items-center gap-1">
+          <button
+            aria-label={`Drag ${label}`}
+            className={cn(iconButton, "cursor-grab active:cursor-grabbing")}
+            draggable
+            onDragEnd={onDragEnd}
+            onDragStart={onDragStart}
+            type="button"
+          >
+            <GripVertical aria-hidden="true" className="size-4" />
+          </button>
+          <span className="inline-flex items-center gap-1.5 font-medium text-muted text-xs uppercase tracking-wide">
+            <Icon aria-hidden="true" className="size-3.5" />
+            {BLOCK_LABELS[block.type]}
+          </span>
+        </div>
         <div className="flex items-center gap-0.5">
           <button
             aria-label={`Move ${label} up`}

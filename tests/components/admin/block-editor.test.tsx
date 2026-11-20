@@ -199,4 +199,56 @@ describe("BlockEditor", () => {
       screen.getByRole("button", { name: "Insert a block at position 2" }),
     ).toBeDisabled();
   });
+
+  it("reorders blocks via drag and drop", () => {
+    renderWithClient(
+      <Harness
+        initial={[
+          { id: "a", type: "heading", text: "A" },
+          { id: "b", type: "text", text: "B" },
+          { id: "c", type: "code", language: "bash", code: "ls" },
+        ]}
+      />,
+    );
+
+    const card2 = screen.getByLabelText("Text block 2").closest("li")
+      ?.lastElementChild as HTMLElement;
+    const card3 = screen.getByLabelText("Code block 3").closest("li")
+      ?.lastElementChild as HTMLElement;
+
+    // Drag events without an active drag are ignored.
+    fireEvent.dragOver(card2);
+    fireEvent.drop(card2);
+    expect(latest.map((block) => block.id)).toEqual(["a", "b", "c"]);
+
+    // Drag block 1 over block 3 and drop it there.
+    const handle1 = screen.getByRole("button", {
+      name: "Drag Heading block 1",
+    });
+    const setData = vi.fn();
+    fireEvent.dragStart(handle1, { dataTransfer: { setData } });
+    expect(setData).toHaveBeenCalledWith("text/plain", "0");
+
+    fireEvent.dragOver(card3);
+    // Repeated dragOver on the same target is a no-op.
+    fireEvent.dragOver(card3);
+    fireEvent.drop(card3);
+    expect(latest.map((block) => block.id)).toEqual(["b", "c", "a"]);
+
+    // Dropping on the dragged block itself keeps the order unchanged.
+    const handleFirst = screen.getByRole("button", {
+      name: "Drag Text block 1",
+    });
+    const card1 = screen.getByLabelText("Text block 1").closest("li")
+      ?.lastElementChild as HTMLElement;
+    fireEvent.dragStart(handleFirst);
+    fireEvent.drop(card1);
+    expect(latest.map((block) => block.id)).toEqual(["b", "c", "a"]);
+
+    // Cancelling a drag clears the drag state without reordering.
+    fireEvent.dragStart(handleFirst);
+    fireEvent.dragOver(card2);
+    fireEvent.dragEnd(handleFirst);
+    expect(latest.map((block) => block.id)).toEqual(["b", "c", "a"]);
+  });
 });
