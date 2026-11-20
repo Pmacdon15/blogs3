@@ -7,6 +7,7 @@ import {
   moveBlock,
   newBlock,
   removeBlock,
+  reorderBlock,
   replaceBlock,
 } from "@/components/admin/blocks";
 import {
@@ -44,6 +45,11 @@ describe("block list helpers", () => {
     const same = [a, b];
     expect(moveBlock(same, 0, -1)).toBe(same);
     expect(moveBlock(same, 1, 1)).toBe(same);
+    expect(reorderBlock([a, b, c], 0, 2)).toEqual([b, c, a]);
+    expect(reorderBlock([a, b, c], 2, 0)).toEqual([c, a, b]);
+    expect(reorderBlock(same, 0, 0)).toBe(same);
+    expect(reorderBlock(same, -1, 1)).toBe(same);
+    expect(reorderBlock(same, 0, 5)).toBe(same);
     const copied = duplicateBlock([a, b], 0);
     expect(copied).toHaveLength(3);
     expect(copied[1]).toMatchObject({ type: "heading", text: "A" });
