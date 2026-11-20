@@ -555,6 +555,27 @@ export function isFetchableHost(hostname: string) {
 
 const tooBig = { error: "Images must be under 4 MB." };
 
+async function readBoundedBlob(
+  body: ReadableStream<Uint8Array<ArrayBuffer>> | null,
+  type: string,
+): Promise<Blob | null> {
+  if (!body) return new Blob([], { type });
+  const reader = body.getReader();
+  const chunks: BlobPart[] = [];
+  let total = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > MAX_IMAGE_BYTES) {
+      await reader.cancel();
+      return null;
+    }
+    chunks.push(value);
+  }
+  return new Blob(chunks, { type });
+}
+
 async function downloadImage(
   url: string,
   filename: string | undefined,
@@ -586,7 +607,8 @@ async function downloadImage(
     .split(";")[0]
     .trim()
     .toLowerCase();
-  const body = await res.blob();
+  const body = await readBoundedBlob(res.body, type);
+  if (!body) return tooBig;
   const name = filename || parsed.pathname.split("/").pop() || "image";
   return { name, type, size: body.size, body };
 }
