@@ -62,6 +62,22 @@ describe("origins and URLs", () => {
     vi.stubEnv("VERCEL_PROJECT_PRODUCTION_URL", "");
     expect(publicOrigin(new Request(URL_))).toBe("https://blog.example.com");
   });
+
+  it("uses NEXT_PUBLIC_SITE_URL when configured", () => {
+    vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://custom.example.org/path");
+    expect(publicOrigin(new Request(URL_))).toBe("https://custom.example.org");
+  });
+
+  it("ignores spoofed X-Forwarded-Host and Forwarded headers", () => {
+    const req = new Request(URL_, {
+      headers: {
+        "x-forwarded-host": "evil.example.com",
+        "x-forwarded-proto": "http",
+        forwarded: "host=evil.example.com;proto=http",
+      },
+    });
+    expect(publicOrigin(req)).toBe("https://blog.example.com");
+  });
 });
 
 describe("bearerToken", () => {
