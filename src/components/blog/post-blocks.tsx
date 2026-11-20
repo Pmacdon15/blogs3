@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { CodeSnippet } from "@/components/blog/code-snippet";
 import type { Block } from "@/lib/schemas";
 
 /** Images on our Blob store go through next/image; any other host is shown as-is. */
@@ -65,15 +66,6 @@ export function PostBlock({ block }: { block: Block }) {
         </figure>
       );
     case "code":
-      return (
-        <div className="not-prose my-6 overflow-hidden rounded-2xl border border-brand-900/20 bg-brand-950 shadow-(--shadow-card)">
-          <div className="flex items-center justify-between border-b border-white/10 px-4 py-2 font-mono text-brand-200 text-xs">
-            <span>{block.language}</span>
-          </div>
-          <pre className="overflow-x-auto p-4 font-mono text-brand-50 text-sm leading-relaxed">
-            <code>{block.code}</code>
-          </pre>
-        </div>
-      );
+      return <CodeSnippet code={block.code} language={block.language} />;
   }
 }

@@ -38,7 +38,15 @@ import {
   type FieldErrors,
 } from "@/components/admin/field-error";
 import { ImageUpload } from "@/components/admin/image-upload";
+import { HighlightedCode } from "@/components/blog/code-snippet";
 import { cn } from "@/lib/cn";
+import {
+  CODE_SNIPPET_PRESETS,
+  CODE_THEME_STYLES,
+  CODE_THEMES,
+  type CodeTheme,
+  DEFAULT_CODE_THEME,
+} from "@/lib/code-highlight";
 import {
   type Block,
   type BlockType,
@@ -485,6 +493,8 @@ function CodeFields({
   const id = useId();
   const ref = useRef<HTMLTextAreaElement>(null);
   const caret = useRef<number | null>(null);
+  const [theme, setTheme] = useState<CodeTheme>(DEFAULT_CODE_THEME);
+  const palette = CODE_THEME_STYLES[theme];
 
   // After a Tab, put the caret back after the inserted spaces.
   useLayoutEffect(() => {
@@ -504,35 +514,102 @@ function CodeFields({
   }
 
   return (
-    <div className="overflow-hidden rounded-lg border border-brand-900/20 bg-brand-950">
-      <div className="flex items-center justify-between border-white/10 border-b px-3 py-1.5">
-        <label className="sr-only" htmlFor={`${id}-language`}>
-          Language for {label}
-        </label>
-        <select
-          className="rounded bg-transparent font-mono text-brand-200 text-xs outline-none focus-visible:ring-1 focus-visible:ring-brand-400"
-          id={`${id}-language`}
-          onChange={(event) =>
-            onChange({
-              ...block,
-              language: event.target.value as CodeBlock["language"],
-            })
-          }
-          value={block.language}
-        >
-          {CODE_LANGUAGES.map((language) => (
-            <option className="text-ink" key={language} value={language}>
-              {language}
+    <div
+      className={cn(
+        "overflow-hidden rounded-lg border transition-colors",
+        palette.wrapper,
+      )}
+      data-code-theme={theme}
+    >
+      <div
+        className={cn(
+          "flex flex-wrap items-center justify-between gap-2 border-b px-3 py-1.5",
+          palette.header,
+        )}
+      >
+        <div className="flex items-center gap-2">
+          <span aria-hidden="true" className="flex items-center gap-1">
+            <span className="size-2 rounded-full bg-rose-400/85" />
+            <span className="size-2 rounded-full bg-amber-400/85" />
+            <span className="size-2 rounded-full bg-emerald-400/85" />
+          </span>
+          <label className="sr-only" htmlFor={`${id}-language`}>
+            Language for {label}
+          </label>
+          <select
+            className="rounded bg-transparent font-mono text-xs outline-none focus-visible:ring-1 focus-visible:ring-brand-400"
+            id={`${id}-language`}
+            onChange={(event) =>
+              onChange({
+                ...block,
+                language: event.target.value as CodeBlock["language"],
+              })
+            }
+            value={block.language}
+          >
+            {CODE_LANGUAGES.map((language) => (
+              <option className="text-ink" key={language} value={language}>
+                {language}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="sr-only" htmlFor={`${id}-theme`}>
+            Theme for {label}
+          </label>
+          <select
+            className={cn(
+              "rounded border px-1.5 py-0.5 font-mono text-[11px] outline-none focus-visible:ring-1 focus-visible:ring-brand-400",
+              palette.badge,
+            )}
+            id={`${id}-theme`}
+            onChange={(event) => setTheme(event.target.value as CodeTheme)}
+            value={theme}
+          >
+            {CODE_THEMES.map((option) => (
+              <option className="text-ink" key={option} value={option}>
+                {CODE_THEME_STYLES[option].label}
+              </option>
+            ))}
+          </select>
+          <label className="sr-only" htmlFor={`${id}-preset`}>
+            Starter snippet for {label}
+          </label>
+          <select
+            className={cn(
+              "rounded border px-1.5 py-0.5 font-mono text-[11px] outline-none focus-visible:ring-1 focus-visible:ring-brand-400",
+              palette.badge,
+            )}
+            id={`${id}-preset`}
+            onChange={(event) => {
+              const preset = CODE_SNIPPET_PRESETS[Number(event.target.value)];
+              setTheme(preset.theme);
+              onChange({
+                ...block,
+                language: preset.language,
+                code: preset.code,
+              });
+            }}
+            value=""
+          >
+            <option className="text-ink" disabled value="">
+              Starter snippet…
             </option>
-          ))}
-        </select>
-        <span className="text-[11px] text-brand-300">Tab inserts 2 spaces</span>
+            {CODE_SNIPPET_PRESETS.map((preset, index) => (
+              <option className="text-ink" key={preset.id} value={index}>
+                {preset.label}
+              </option>
+            ))}
+          </select>
+          <span className="text-[11px] opacity-75">Tab inserts 2 spaces</span>
+        </div>
       </div>
       <textarea
         aria-describedby={`${id}-error`}
         aria-invalid={error ? true : undefined}
         aria-label={label}
-        className="field-sizing-content block min-h-32 w-full resize-y bg-transparent p-3 font-mono text-brand-50 text-sm leading-relaxed outline-none placeholder:text-brand-300/60"
+        className="field-sizing-content block min-h-32 w-full resize-y bg-transparent p-3 font-mono text-sm leading-relaxed outline-none placeholder:opacity-50"
         onChange={(event) => onChange({ ...block, code: event.target.value })}
         onKeyDown={onKeyDown}
         placeholder="// code"
@@ -540,6 +617,23 @@ function CodeFields({
         spellCheck={false}
         value={block.code}
       />
+      {block.code ? (
+        <div
+          aria-hidden="true"
+          className="border-white/10 border-t bg-black/20 px-3 py-2.5"
+        >
+          <div className="mb-1 font-mono text-[10px] uppercase tracking-wider opacity-60">
+            Color preview ({palette.label})
+          </div>
+          <pre className="overflow-x-auto font-mono text-xs leading-relaxed">
+            <HighlightedCode
+              code={block.code}
+              language={block.language}
+              theme={theme}
+            />
+          </pre>
+        </div>
+      ) : null}
       <div className="bg-surface px-3">
         <FieldError id={`${id}-error`} message={error} />
       </div>
