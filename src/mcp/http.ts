@@ -1,4 +1,12 @@
 import type { AuthInfo } from "@modelcontextprotocol/server";
+import {
+  clientIp,
+  createRateLimiter,
+  type RateLimiter,
+  type RateLimitResult,
+  rateLimitHeaders,
+  tooManyRequests,
+} from "@/lib/rate-limit";
 import { MCP_SCOPES } from "@/mcp/oauth-config";
 
 export { MCP_SCOPES };
@@ -68,7 +76,7 @@ export const MCP_CORS_HEADERS: Record<string, string> = {
   "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
   "Access-Control-Allow-Headers": ALLOWED_HEADERS,
   "Access-Control-Expose-Headers":
-    "WWW-Authenticate, Mcp-Session-Id, Mcp-Protocol-Version",
+    "WWW-Authenticate, Mcp-Session-Id, Mcp-Protocol-Version, Retry-After, RateLimit-Limit, RateLimit-Remaining, RateLimit-Reset",
   "Access-Control-Max-Age": "86400",
   "X-Content-Type-Options": "nosniff",
 };
@@ -222,16 +230,61 @@ export function callerLabel(req: Request) {
   return agent ? agent.slice(0, 120) : "no user agent";
 }
 
+export type McpRateLimits = {
+  /**
+   * Requests without a usable token, per client IP. Checked before the
+   * token is verified, so a client sending junk or stolen-looking tokens is
+   * cut off before each one costs a Clerk call.
+   */
+  unauthenticated: RateLimiter;
+  /** Requests per verified user, whichever app or IP they come from. */
+  user: RateLimiter;
+};
+
 /**
- * The MCP route: CORS, bearer auth, then the MCP handler with the verified
- * auth on `req.auth`, where mcp-handler reads it.
+ * The default MCP limits. Signing in takes a client a couple of 401s, so 20
+ * a minute leaves plenty of room; 120 calls a minute is far more than an AI
+ * app working on a blog needs.
  */
-export function mcpRoute(handler: McpHandler, verifyToken: VerifyToken) {
+export function defaultMcpRateLimits(): McpRateLimits {
+  return {
+    unauthenticated: createRateLimiter({ limit: 20, windowMs: 60_000 }),
+    user: createRateLimiter({ limit: 120, windowMs: 60_000 }),
+  };
+}
+
+/** A JSON-RPC style 429 for MCP clients, with CORS. */
+function rateLimited(result: RateLimitResult) {
+  return withCors(
+    tooManyRequests(result, {
+      error: "rate_limited",
+      error_description: `Too many requests. Try again in ${result.resetSeconds} seconds.`,
+    }),
+  );
+}
+
+/**
+ * The MCP route: CORS, rate limits, bearer auth, then the MCP handler with
+ * the verified auth on `req.auth`, where mcp-handler reads it.
+ */
+export function mcpRoute(
+  handler: McpHandler,
+  verifyToken: VerifyToken,
+  limits: McpRateLimits = defaultMcpRateLimits(),
+) {
   return async function route(req: Request): Promise<Response> {
     if (req.method === "OPTIONS") return preflight(req);
 
+    const ip = clientIp(req);
+    const blocked = limits.unauthenticated.peek(ip);
+    if (!blocked.allowed) {
+      console.warn(`MCP: rate limited unauthenticated requests from ${ip}`);
+      return rateLimited(blocked);
+    }
+
     const token = bearerToken(req);
     if (!token) {
+      limits.unauthenticated.consume(ip);
       console.info(
         `MCP: ${req.method} without a bearer token, asked to sign in (${callerLabel(req)})`,
       );
@@ -245,18 +298,33 @@ export function mcpRoute(handler: McpHandler, verifyToken: VerifyToken) {
       console.error("MCP: couldn't verify the access token", error);
     }
     if (!authInfo) {
+      limits.unauthenticated.consume(ip);
       console.warn(`MCP: access token refused (${callerLabel(req)})`);
       return withCors(
         unauthorized(req, "The access token is invalid or has expired."),
       );
     }
     if (authInfo.expiresAt && authInfo.expiresAt < Date.now() / 1000) {
+      limits.unauthenticated.consume(ip);
       return withCors(unauthorized(req, "The access token has expired."));
+    }
+
+    const userId = authInfo.extra?.userId;
+    const usage = limits.user.consume(
+      typeof userId === "string" ? userId : `client:${authInfo.clientId}`,
+    );
+    if (!usage.allowed) {
+      console.warn(`MCP: rate limited user ${String(userId)}`);
+      return rateLimited(usage);
     }
 
     const { request, jsonOnly } = await negotiate(req);
     Object.assign(request, { auth: authInfo });
-    const response = await handler(request);
-    return withCors(jsonOnly ? await asJson(response) : response);
+    const answer = await handler(request);
+    const response = withCors(jsonOnly ? await asJson(answer) : answer);
+    for (const [name, value] of Object.entries(rateLimitHeaders(usage))) {
+      response.headers.set(name, value);
+    }
+    return response;
   };
 }
