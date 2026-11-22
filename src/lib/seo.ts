@@ -25,7 +25,17 @@ export type StaticSitemapRoute = {
  */
 export const PUBLIC_STATIC_ROUTES: readonly StaticSitemapRoute[] = [
   { path: "/", changeFrequency: "daily", priority: 1 },
+  { path: "/about", changeFrequency: "monthly", priority: 0.5 },
 ];
+
+/** The site's one author, shown on /about and credited on every post. */
+export const AUTHOR = {
+  name: "Patrick MacDonald",
+  location: "Calgary, Alberta",
+  website: "https://www.patmac.ca",
+  github: "https://github.com/Pmacdon15",
+  linkedin: "https://www.linkedin.com/in/patrick-macdonald-231640285",
+} as const;
 
 const LOCAL_FALLBACK_URL = "http://localhost:3000";
 
@@ -84,6 +94,18 @@ export function websiteJsonLd(): Record<string, unknown> {
   };
 }
 
+/** JSON-LD Person structured data for the author, used on /about. */
+export function personJsonLd(): Record<string, unknown> {
+  return {
+    "@context": "https://schema.org",
+    "@type": "Person",
+    name: AUTHOR.name,
+    url: absoluteUrl("/about"),
+    homeLocation: { "@type": "Place", name: AUTHOR.location },
+    sameAs: [AUTHOR.website, AUTHOR.github, AUTHOR.linkedin],
+  };
+}
+
 /** JSON-LD BlogPosting structured data for a published post page. */
 export function blogPostingJsonLd(post: Post): Record<string, unknown> {
   const url = absoluteUrl(`/blog/${post.slug}`);
@@ -98,6 +120,11 @@ export function blogPostingJsonLd(post: Post): Record<string, unknown> {
     dateModified: post.updatedAt,
     image: post.coverImageUrl ? [post.coverImageUrl] : undefined,
     keywords: post.tags.length > 0 ? post.tags.join(", ") : undefined,
+    author: {
+      "@type": "Person",
+      name: AUTHOR.name,
+      url: absoluteUrl("/about"),
+    },
     publisher: {
       "@type": "Organization",
       name: SITE_NAME,

@@ -4,6 +4,7 @@ import {
   blogPostingJsonLd,
   blogSitemapUrls,
   getSiteUrl,
+  personJsonLd,
   SITE_DESCRIPTION,
   SITE_NAME,
   SITEMAP_PAGE_SIZE,
@@ -90,6 +91,22 @@ describe("JSON-LD builders", () => {
     });
   });
 
+  it("builds Person schema for the author with their profiles", () => {
+    vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://blogs.example.com");
+    expect(personJsonLd()).toEqual({
+      "@context": "https://schema.org",
+      "@type": "Person",
+      name: "Patrick MacDonald",
+      url: "https://blogs.example.com/about",
+      homeLocation: { "@type": "Place", name: "Calgary, Alberta" },
+      sameAs: [
+        "https://www.patmac.ca",
+        "https://github.com/Pmacdon15",
+        "https://www.linkedin.com/in/patrick-macdonald-231640285",
+      ],
+    });
+  });
+
   it("builds BlogPosting schema with optional fields populated or omitted", () => {
     vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://blogs.example.com");
     expect(blogPostingJsonLd(samplePost)).toEqual({
@@ -106,6 +123,11 @@ describe("JSON-LD builders", () => {
       dateModified: "2026-11-19T12:00:00.000Z",
       image: ["https://example.com/cover.png"],
       keywords: "nextjs, seo",
+      author: {
+        "@type": "Person",
+        name: "Patrick MacDonald",
+        url: "https://blogs.example.com/about",
+      },
       publisher: {
         "@type": "Organization",
         name: SITE_NAME,
