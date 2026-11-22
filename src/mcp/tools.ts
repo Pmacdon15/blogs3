@@ -1,3 +1,5 @@
+import { lookup } from "node:dns/promises";
+import { BlockList } from "node:net";
 import { z } from "zod";
 import { dbSearchPublishedPosts } from "@/db/posts";
 import { revalidatePostCaches } from "@/lib/cache/revalidate";
@@ -558,6 +560,69 @@ export function isFetchableHost(hostname: string) {
   return !BLOCKED_HOST_SUFFIX.test(host);
 }
 
+/** Address ranges that aren't the public internet (RFC 6890 and friends). */
+const NON_PUBLIC = new BlockList();
+for (const [network, prefix] of [
+  ["0.0.0.0", 8],
+  ["10.0.0.0", 8],
+  ["100.64.0.0", 10],
+  ["127.0.0.0", 8],
+  ["169.254.0.0", 16],
+  ["172.16.0.0", 12],
+  ["192.0.0.0", 24],
+  ["192.168.0.0", 16],
+  ["198.18.0.0", 15],
+  ["224.0.0.0", 3],
+] as const) {
+  NON_PUBLIC.addSubnet(network, prefix, "ipv4");
+}
+for (const [network, prefix] of [
+  ["::", 128],
+  ["::1", 128],
+  ["fc00::", 7],
+  ["fe80::", 10],
+  ["ff00::", 8],
+] as const) {
+  NON_PUBLIC.addSubnet(network, prefix, "ipv6");
+}
+
+/** IPv4-mapped (::ffff:0:0/96) and NAT64 (64:ff9b::/96) IPv6 embed an IPv4. */
+const EMBEDDED_V4 =
+  /^\[(?:::ffff:|64:ff9b::)([0-9a-f]{1,4}):([0-9a-f]{1,4})\]$/;
+
+function isPublicAddress(address: string, family: number) {
+  if (family === 4) return !NON_PUBLIC.check(address, "ipv4");
+  if (NON_PUBLIC.check(address, "ipv6")) return false;
+  // The URL parser canonicalises the address, e.g. ::ffff:10.0.0.1 → ::ffff:a00:1.
+  const embedded = EMBEDDED_V4.exec(new URL(`http://[${address}]`).hostname);
+  if (!embedded) return true;
+  const high = Number.parseInt(embedded[1], 16);
+  const low = Number.parseInt(embedded[2], 16);
+  const v4 = [high >> 8, high & 255, low >> 8, low & 255].join(".");
+  return !NON_PUBLIC.check(v4, "ipv4");
+}
+
+/**
+ * Whether every address a host resolves to is public, so a public DNS name
+ * pointing at a private, loopback, link-local (cloud metadata) or CGNAT
+ * address can't be used to reach the server's own network.
+ *
+ * A DNS-rebinding TOCTOU window remains: `fetch` resolves the name again
+ * after this check, so a host that answers differently the second time can
+ * still slip through. Closing it means pinning the address in the fetch.
+ */
+async function resolvesToPublicAddresses(hostname: string) {
+  try {
+    const addresses = await lookup(hostname, { all: true, verbatim: true });
+    return (
+      addresses.length > 0 &&
+      addresses.every(({ address, family }) => isPublicAddress(address, family))
+    );
+  } catch {
+    return false;
+  }
+}
+
 const tooBig = { error: "Images must be under 4 MB." };
 
 async function readBoundedBlob(
@@ -586,7 +651,10 @@ async function downloadImage(
   filename: string | undefined,
 ): Promise<ImageFile | { error: string }> {
   const parsed = new URL(url);
-  if (!isFetchableHost(parsed.hostname)) {
+  if (
+    !isFetchableHost(parsed.hostname) ||
+    !(await resolvesToPublicAddresses(parsed.hostname))
+  ) {
     return { error: "That image host can't be reached from the blog." };
   }
   let res: Response;

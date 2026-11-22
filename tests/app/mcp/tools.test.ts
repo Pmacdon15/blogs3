@@ -13,7 +13,10 @@ const m = vi.hoisted(() => ({
   isAdmin: vi.fn(),
   revalidatePostCaches: vi.fn(),
   dbSearchPublishedPosts: vi.fn(),
+  lookup: vi.fn(),
 }));
+
+vi.mock("node:dns/promises", () => ({ lookup: m.lookup }));
 
 vi.mock("@/lib/dal/posts", () => ({
   listPostsForAdmin: m.listPostsForAdmin,
@@ -575,6 +578,7 @@ describe("upload_image", () => {
 
   beforeEach(() => {
     m.uploadImage.mockResolvedValue({ ok: true, data: { url: BLOB_URL } });
+    m.lookup.mockResolvedValue([{ address: "93.184.215.14", family: 4 }]);
   });
 
   const uploaded = () =>
@@ -752,6 +756,63 @@ describe("upload_image", () => {
         /can't be reached/,
       );
     }
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("checks every resolved address before fetching", async () => {
+    const fetchMock = vi.fn(async () => new Response("png"));
+    vi.stubGlobal("fetch", fetchMock);
+    const url = "https://img.example.com/a.png";
+    const attempt = async (...addresses: [string, number][]) => {
+      fetchMock.mockClear();
+      m.lookup.mockResolvedValue(
+        addresses.map(([address, family]) => ({ address, family })),
+      );
+      const result = await uploadImage(USER, { url });
+      return fetchMock.mock.calls.length > 0 ? "fetched" : result.summary;
+    };
+
+    // Public addresses, v4 and v6, including an IPv4-mapped public one.
+    expect(await attempt(["93.184.215.14", 4])).toBe("fetched");
+    expect(m.lookup).toHaveBeenCalledWith("img.example.com", {
+      all: true,
+      verbatim: true,
+    });
+    expect(
+      await attempt(["2606:2800:21f:cb07::1", 6], ["::ffff:8.8.8.8", 6]),
+    ).toBe("fetched");
+
+    for (const blocked of [
+      ["10.1.2.3", 4],
+      ["192.168.0.10", 4],
+      ["172.20.0.1", 4],
+      ["100.100.0.1", 4],
+      ["127.0.0.1", 4],
+      ["169.254.169.254", 4],
+      ["0.0.0.0", 4],
+      ["239.1.1.1", 4],
+      ["::1", 6],
+      ["::", 6],
+      ["fd12:3456::1", 6],
+      ["fe80::1", 6],
+      ["ff02::1", 6],
+      ["::ffff:10.0.0.1", 6],
+      ["::ffff:169.254.169.254", 6],
+      ["64:ff9b::7f00:1", 6],
+    ] as [string, number][]) {
+      expect(await attempt(blocked)).toMatch(/can't be reached/);
+      // One private address among public ones is enough to refuse.
+      expect(await attempt(["93.184.215.14", 4], blocked)).toMatch(
+        /can't be reached/,
+      );
+    }
+
+    expect(await attempt()).toMatch(/can't be reached/);
+    fetchMock.mockClear();
+    m.lookup.mockRejectedValue(new Error("ENOTFOUND"));
+    expect((await uploadImage(USER, { url })).summary).toMatch(
+      /can't be reached/,
+    );
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
