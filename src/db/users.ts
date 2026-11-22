@@ -9,7 +9,11 @@ import { cacheLife, cacheTag } from "next/cache";
  * build a client from the secret key instead.
  */
 
-/** The user's primary email, lowercased, cached per user. */
+/**
+ * The user's primary email, lowercased, cached per user. Returns null unless
+ * Clerk reports that address as verified, so an unverified claim on an admin's
+ * address can never match ADMIN_EMAILS.
+ */
 export async function dbGetPrimaryEmail(
   userId: string,
 ): Promise<string | null> {
@@ -21,5 +25,6 @@ export async function dbGetPrimaryEmail(
   const primary = user.emailAddresses.find(
     (email) => email.id === user.primaryEmailAddressId,
   );
-  return primary?.emailAddress.toLowerCase() ?? null;
+  if (primary?.verification?.status !== "verified") return null;
+  return primary.emailAddress.toLowerCase();
 }
