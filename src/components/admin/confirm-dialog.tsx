@@ -1,11 +1,27 @@
 "use client";
 
-import { useEffect, useId, useRef } from "react";
+import { type KeyboardEvent, useEffect, useId, useRef } from "react";
 import { Button } from "@/components/ui/button";
+
+/** Keeps Tab and Shift+Tab cycling through the dialog's enabled buttons. */
+export function trapTab(event: KeyboardEvent<HTMLElement>) {
+  if (event.key !== "Tab") return;
+  const buttons = Array.from(
+    event.currentTarget.querySelectorAll<HTMLElement>("button:not([disabled])"),
+  );
+  const first = buttons[0];
+  const last = buttons[buttons.length - 1];
+  const active = document.activeElement;
+  if (!first || (event.shiftKey ? active === first : active === last)) {
+    event.preventDefault();
+    (event.shiftKey ? last : first)?.focus();
+  }
+}
 
 /*
  * A small modal confirmation. Rendered only while open; focus starts on
- * Cancel (the safe choice) and Escape or a backdrop click cancels.
+ * Cancel (the safe choice), stays inside while open and goes back to
+ * whatever opened it on close. Escape or a backdrop click cancels.
  */
 export function ConfirmDialog({
   open,
@@ -29,7 +45,11 @@ export function ConfirmDialog({
   const cancelRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
-    if (open) cancelRef.current?.focus();
+    if (!open) return;
+    // Never null while the page has a <body>; SVG elements can focus() too.
+    const opener = document.activeElement as HTMLElement;
+    cancelRef.current?.focus();
+    return () => opener.focus();
   }, [open]);
 
   if (!open) return null;
@@ -50,6 +70,7 @@ export function ConfirmDialog({
         className="relative w-full max-w-sm rounded-2xl border border-line bg-surface p-5 shadow-(--shadow-lift)"
         onKeyDown={(event) => {
           if (event.key === "Escape") onCancel();
+          else trapTab(event);
         }}
         role="alertdialog"
       >

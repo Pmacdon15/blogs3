@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { Logo } from "@/components/blog/logo";
 import { SiteFooter } from "@/components/blog/site-footer";
 import { SiteHeader } from "@/components/blog/site-header";
+import { SkipLink } from "@/components/skip-link";
 
 describe("Logo", () => {
   it("links home", () => {
@@ -11,6 +12,15 @@ describe("Logo", () => {
       "href",
       "/",
     );
+  });
+});
+
+describe("SkipLink", () => {
+  it("jumps to the main landmark", () => {
+    render(<SkipLink />);
+    expect(
+      screen.getByRole("link", { name: "Skip to content" }),
+    ).toHaveAttribute("href", "#main");
   });
 });
 

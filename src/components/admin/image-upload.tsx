@@ -171,7 +171,7 @@ export function ImageUpload({
                     aria-valuenow={currentWidth}
                     aria-valuetext={`${currentWidth}%`}
                     className={cn(
-                      "absolute inset-y-0 flex w-4 cursor-ew-resize touch-none items-center justify-center focus-visible:outline-none",
+                      "group/handle absolute inset-y-0 flex w-6 cursor-ew-resize touch-none items-center justify-center focus-visible:outline-none",
                       side === "left" ? "left-0" : "right-0",
                     )}
                     key={side}
@@ -186,7 +186,7 @@ export function ImageUpload({
                   >
                     <span
                       aria-hidden="true"
-                      className="h-10 w-1.5 rounded-full bg-surface/90 shadow-sm ring-1 ring-ink/20 transition-colors group-hover/preview:bg-brand-500"
+                      className="h-10 w-1.5 rounded-full bg-surface/90 shadow-sm ring-1 ring-ink/20 transition-colors group-hover/preview:bg-brand-500 group-focus-visible/handle:bg-brand-600 group-focus-visible/handle:ring-2 group-focus-visible/handle:ring-white"
                     />
                   </div>
                 ))}
@@ -213,7 +213,7 @@ export function ImageUpload({
           <input
             aria-describedby={error ? errorId : undefined}
             aria-invalid={error ? true : undefined}
-            className="h-9 w-full rounded-lg border border-line bg-surface pr-3 pl-8 text-sm placeholder:text-muted/70 focus:border-brand-400"
+            className="h-9 w-full rounded-lg border border-line bg-surface pr-3 pl-8 text-sm placeholder:text-muted focus:border-brand-500"
             id={inputId}
             onChange={(event) => onChange(event.target.value)}
             placeholder="https://…"

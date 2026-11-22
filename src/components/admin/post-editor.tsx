@@ -40,7 +40,7 @@ import { slugify } from "@/lib/schemas";
 import type { Post, PostStatus } from "@/lib/types";
 
 const inputClass =
-  "mt-1 w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm placeholder:text-muted/70 focus:border-brand-400 aria-invalid:border-red-400";
+  "mt-1 w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm placeholder:text-muted focus:border-brand-500 aria-invalid:border-red-400";
 
 type Props = { mode: "create" } | { mode: "edit"; post: Post };
 
@@ -281,7 +281,7 @@ export function PostEditor(props: Props) {
               <input
                 aria-describedby="post-title-error"
                 aria-invalid={titleError ? true : undefined}
-                className="w-full bg-transparent font-semibold text-3xl text-ink tracking-tight outline-none placeholder:text-muted/50 sm:text-4xl"
+                className="w-full rounded-md bg-transparent font-semibold text-3xl text-ink tracking-tight placeholder:text-muted sm:text-4xl"
                 id="post-title"
                 onChange={(event) => {
                   const title = event.target.value;

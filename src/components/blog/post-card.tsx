@@ -13,7 +13,8 @@ export function postHref(slug: string) {
 
 /*
  * A post in a list. The whole card is one link (the title's ::after covers
- * the card), so tags and meta stay plain text for screen readers.
+ * the card), so tags and meta stay plain text for screen readers. The focus
+ * ring goes on the card too, since the link covers all of it.
  */
 export function PostCard({
   post,
@@ -25,7 +26,7 @@ export function PostCard({
   return (
     <article
       className={cn(
-        "card group relative flex flex-col overflow-hidden transition duration-200 hover:-translate-y-1 hover:border-brand-200 hover:shadow-(--shadow-lift) focus-within:-translate-y-1 focus-within:shadow-(--shadow-lift)",
+        "card group relative flex flex-col overflow-hidden transition duration-200 hover:-translate-y-1 hover:border-brand-200 hover:shadow-(--shadow-lift) focus-within:-translate-y-1 focus-within:shadow-(--shadow-lift) has-[a:focus-visible]:outline-2 has-[a:focus-visible]:outline-brand-600 has-[a:focus-visible]:outline-offset-2",
         featured && "md:grid md:grid-cols-2",
       )}
     >
