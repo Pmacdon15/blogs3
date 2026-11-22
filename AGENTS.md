@@ -28,4 +28,5 @@ Read `node_modules/next/dist/docs/` for this Next.js version before writing code
 ## Checks
 
 `bun run lint` (Biome, no suppressions), `bun run typecheck`, `bun run test`
-(100% coverage), `bun run test:build`.
+(100% coverage), `bun run test:build`, and `bun run test:e2e` (Playwright +
+axe, WCAG 2.2 AA; see `e2e/README.md`) after `bun run build`.

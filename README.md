@@ -274,6 +274,8 @@ search box ── useQuery ──▶ /api/posts/search ──▶ db (published p
 | `bun run test:coverage`                              | Run tests with 100% coverage enforcement                             |
 | `bun run test:build`                                 | Run `next build`, then verify the prerendered static shells          |
 | `bun run db:schema`                                  | Apply `schema.sql` to `$DATABASE_URL`                                |
+| `bun run e2e:seed`                                   | Load the Playwright fixture posts (`e2e/seed.sql`)                   |
+| `bun run test:e2e`                                   | Playwright: editor + publishing flow and WCAG 2.2 AA (axe) checks    |
 
 ### Vitest Projects (`vitest.config.mts`)
 
@@ -283,6 +285,10 @@ search box ── useQuery ──▶ /api/posts/search ──▶ db (published p
 - **build** (node): `tests/build/static-shell.test.ts` inspects `.next` after `next build`: no page is ƒ dynamic, `/`, `/sign-in`, `/sign-up`, and `/shell-check` are ○ static, every ◐ partial page has an `<h1>` in its shell, and every page under `ensureStatic = "navigation"` is ○.
 
 Coverage must stay at **100%** (lines, branches, functions, statements) for everything in `src` except `coverage.exclude`.
+
+### End-to-end and accessibility (`e2e/`, Playwright)
+
+Runs against a production build (`bun run build`, then `bun run test:e2e`). The **public** and **public-mobile** projects scan every kind of public page with axe-core for WCAG 2.2 A/AA and check keyboard access, visible focus, search announcements and 320px reflow. The **editor** project walks a post through the studio (write a draft → validation errors → preview → publish → edit → unpublish → delete) with axe scans along the way; it needs a Clerk development instance and runs only when `E2E_CLERK_USER_EMAIL` is set. See [`e2e/README.md`](e2e/README.md) and [`docs/accessibility.md`](docs/accessibility.md).
 
 ---
 
