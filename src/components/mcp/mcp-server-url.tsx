@@ -48,7 +48,10 @@ export function McpServerUrl() {
         {url}
       </code>
       <Button
-        aria-label="Copy MCP server URL"
+        // Contains the visible label, so voice control matches it (WCAG 2.5.3).
+        aria-label={
+          state === "copied" ? "Copied" : "Copy URL of the MCP server"
+        }
         className="shrink-0"
         onClick={copy}
         size="md"

@@ -9,7 +9,11 @@ vi.mock("next/navigation", () => ({
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 vi.mock("@/lib/actions/posts", () => ({ uploadImageAction: vi.fn() }));
 
-import { BlockEditor, indent } from "@/components/admin/block-editor";
+import {
+  BlockEditor,
+  findFocusTarget,
+  indent,
+} from "@/components/admin/block-editor";
 import type { FieldErrors } from "@/components/admin/field-error";
 import { type Block, MAX_BLOCKS } from "@/lib/schemas";
 import { renderWithClient } from "./utils";
@@ -107,6 +111,141 @@ describe("BlockEditor", () => {
     expect((latest[0] as { code: string }).code).toContain("fetchJson");
   });
 
+  it("lets Esc release the next Tab so keyboard users can leave the code field", () => {
+    renderWithClient(
+      <Harness
+        initial={[{ id: "c", type: "code", language: "go", code: "ab" }]}
+      />,
+    );
+    const code = screen.getByLabelText("Code block 1") as HTMLTextAreaElement;
+    code.setSelectionRange(0, 0);
+    fireEvent.keyDown(code, { key: "Escape" });
+    // Released: Tab is left to the browser (moves focus), so nothing is typed.
+    expect(fireEvent.keyDown(code, { key: "Tab" })).toBe(true);
+    expect(code).toHaveValue("ab");
+    // Only the one Tab is released.
+    expect(fireEvent.keyDown(code, { key: "Tab" })).toBe(false);
+    expect(code).toHaveValue("  ab");
+    // Leaving the field (or any other key) re-arms Tab.
+    fireEvent.keyDown(code, { key: "Escape" });
+    fireEvent.blur(code);
+    expect(fireEvent.keyDown(code, { key: "Tab" })).toBe(false);
+    fireEvent.keyDown(code, { key: "Escape" });
+    fireEvent.keyDown(code, { key: "x" });
+    expect(fireEvent.keyDown(code, { key: "Tab" })).toBe(false);
+  });
+
+  it("moves focus with the change, never dropping it on <body>", async () => {
+    const user = userEvent.setup();
+    renderWithClient(
+      <Harness
+        initial={[
+          { id: "a", type: "heading", text: "A" },
+          { id: "b", type: "text", text: "B" },
+          { id: "c", type: "text", text: "C" },
+        ]}
+      />,
+    );
+
+    // A new block from the toolbar: focus its first field.
+    await user.click(within(toolbar()).getByRole("button", { name: "Text" }));
+    expect(screen.getByLabelText("Text block 4")).toHaveFocus();
+
+    // Moving to the top disables "up", so focus moves to "down"...
+    await user.click(
+      screen.getByRole("button", { name: "Move Text block 2 up" }),
+    );
+    expect(
+      screen.getByRole("button", { name: "Move Text block 1 down" }),
+    ).toHaveFocus();
+    // In between, focus stays on the arrow; at the bottom it moves to "up".
+    await user.keyboard("{Enter}");
+    expect(
+      screen.getByRole("button", { name: "Move Text block 2 down" }),
+    ).toHaveFocus();
+    await user.keyboard("{Enter}");
+    expect(
+      screen.getByRole("button", { name: "Move Text block 3 down" }),
+    ).toHaveFocus();
+    await user.keyboard("{Enter}");
+    expect(
+      screen.getByRole("button", { name: "Move Text block 4 up" }),
+    ).toHaveFocus();
+    await user.keyboard("{Enter}");
+    expect(
+      screen.getByRole("button", { name: "Move Text block 3 up" }),
+    ).toHaveFocus();
+    expect(latest.map((block) => block.id)).toEqual([
+      "a",
+      "c",
+      "b",
+      latest[3].id,
+    ]);
+
+    // Deleting focuses the block after it, or before it at the end...
+    await user.click(
+      screen.getByRole("button", { name: "Delete Text block 2" }),
+    );
+    expect(
+      screen.getByRole("button", { name: "Drag Text block 2" }),
+    ).toHaveFocus();
+    await user.click(
+      screen.getByRole("button", { name: "Delete Text block 3" }),
+    );
+    expect(
+      screen.getByRole("button", { name: "Drag Text block 2" }),
+    ).toHaveFocus();
+    // ...and the toolbar once the list is empty.
+    await user.click(
+      screen.getByRole("button", { name: "Delete Text block 2" }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Delete Heading block 1" }),
+    );
+    expect(
+      within(toolbar()).getByRole("button", { name: "Heading" }),
+    ).toHaveFocus();
+  });
+
+  it("focuses the insert menu, and returns focus when it closes", async () => {
+    const user = userEvent.setup();
+    renderWithClient(
+      <Harness
+        initial={[
+          { id: "a", type: "heading", text: "A" },
+          { id: "b", type: "text", text: "B" },
+        ]}
+      />,
+    );
+    const toggle = () =>
+      screen.getByRole("button", { name: "Insert a block at position 2" });
+    const menu = () =>
+      screen.getByRole("group", { name: "Block type for position 2" });
+
+    await user.click(toggle());
+    expect(
+      within(menu()).getByRole("button", { name: "Heading" }),
+    ).toHaveFocus();
+    await user.keyboard("{Escape}");
+    expect(toggle()).toHaveFocus();
+
+    await user.click(toggle());
+    fireEvent.keyDown(menu(), { key: "a" });
+    await user.click(within(menu()).getByRole("button", { name: "Cancel" }));
+    expect(toggle()).toHaveFocus();
+
+    await user.click(toggle());
+    await user.click(within(menu()).getByRole("button", { name: "Heading" }));
+    expect(screen.getByLabelText("Heading block 2")).toHaveFocus();
+  });
+
+  it("finds no focus target without the list or toolbar", () => {
+    expect(findFocusTarget(null, null, "toolbar")).toBeNull();
+    expect(
+      findFocusTarget(null, null, { blockId: "a", selector: "button" }),
+    ).toBeNull();
+  });
+
   it("moves, duplicates, deletes and inserts between blocks", async () => {
     const user = userEvent.setup();
     renderWithClient(
@@ -190,7 +329,7 @@ describe("BlockEditor", () => {
       "true",
     );
     expect(screen.getByLabelText("Code block 4")).toHaveAccessibleDescription(
-      "Code can't be empty",
+      "Tab inserts 2 spaces · Esc then Tab to leave Code can't be empty",
     );
     for (const message of [
       "Text can't be empty",

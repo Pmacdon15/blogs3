@@ -123,7 +123,7 @@ export function SearchBar() {
           aria-controls={listId}
           aria-expanded={showList}
           autoComplete="off"
-          className="h-14 w-full rounded-2xl border border-line bg-white/90 pr-12 pl-12 text-base text-ink shadow-(--shadow-card) outline-none backdrop-blur transition placeholder:text-muted/80 focus:border-brand-300 focus:shadow-(--shadow-lift) focus:ring-4 focus:ring-brand-100"
+          className="h-14 w-full rounded-2xl border border-line bg-white/90 pr-12 pl-12 text-base text-ink shadow-(--shadow-card) outline-none backdrop-blur transition placeholder:text-muted focus:border-brand-500 focus:shadow-(--shadow-lift) focus:ring-4 focus:ring-brand-500/25"
           id={`${id}-input`}
           onBlur={() => setOpen(false)}
           onChange={(event) => {
@@ -182,40 +182,37 @@ export function SearchBar() {
           tabIndex={-1}
         >
           {results.map((post, index) => (
-            <div
+            // Each option is the link itself: an option can't hold an
+            // interactive child, and a real link still opens in a new tab.
+            <Link
               aria-selected={index === active}
               className={cn(
-                "border-line border-b last:border-b-0",
+                "flex items-start gap-3 border-line border-b px-4 py-3 last:border-b-0 hover:bg-brand-50",
                 index === active && "bg-brand-50",
               )}
+              href={resultHref(post.slug)}
               id={`${id}-option-${index}`}
               key={post.id}
+              onClick={() => setOpen(false)}
+              onMouseEnter={() => setActiveIndex(index)}
               role="option"
               tabIndex={-1}
             >
-              <Link
-                className="flex items-start gap-3 px-4 py-3 hover:bg-brand-50"
-                href={resultHref(post.slug)}
-                onClick={() => setOpen(false)}
-                onMouseEnter={() => setActiveIndex(index)}
-                tabIndex={-1}
-              >
-                <FileText
-                  aria-hidden="true"
-                  className="mt-0.5 size-4 shrink-0 text-brand-500"
-                />
-                <span className="flex min-w-0 flex-col gap-0.5">
-                  <span className="truncate font-medium text-ink">
-                    {post.title}
-                  </span>
-                  <span className="truncate text-muted text-xs">
-                    {post.publishedAt ? formatDate(post.publishedAt) : null}
-                    {post.publishedAt && post.excerpt ? " · " : null}
-                    {post.excerpt}
-                  </span>
+              <FileText
+                aria-hidden="true"
+                className="mt-0.5 size-4 shrink-0 text-brand-500"
+              />
+              <span className="flex min-w-0 flex-col gap-0.5">
+                <span className="truncate font-medium text-ink">
+                  {post.title}
                 </span>
-              </Link>
-            </div>
+                <span className="truncate text-muted text-xs">
+                  {post.publishedAt ? formatDate(post.publishedAt) : null}
+                  {post.publishedAt && post.excerpt ? " · " : null}
+                  {post.excerpt}
+                </span>
+              </span>
+            </Link>
           ))}
         </div>
         {results.length === 0 ? (

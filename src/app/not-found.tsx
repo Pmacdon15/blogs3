@@ -2,14 +2,20 @@ import { Compass } from "lucide-react";
 import Link from "next/link";
 import { SiteFooter } from "@/components/blog/site-footer";
 import { SiteHeader } from "@/components/blog/site-header";
+import { SkipLink } from "@/components/skip-link";
 import { buttonClasses } from "@/components/ui/button";
 
 /* The 404 for any unknown URL, in the public frame. */
 export default function NotFound() {
   return (
     <div className="flex min-h-dvh flex-col">
+      <SkipLink />
       <SiteHeader />
-      <main className="relative isolate flex flex-1 items-center overflow-hidden">
+      <main
+        className="relative isolate flex flex-1 items-center overflow-hidden outline-none"
+        id="main"
+        tabIndex={-1}
+      >
         <div
           aria-hidden="true"
           className="absolute top-0 left-1/2 -z-10 h-80 w-[40rem] -translate-x-1/2 rounded-full bg-brand-100/70 blur-3xl"

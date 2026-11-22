@@ -17,7 +17,9 @@
     "test:app": "vitest run --project app",
     "test:build": "next build && vitest run --project build",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
+    "e2e:seed": "psql \"$DATABASE_URL\" -v ON_ERROR_STOP=1 -f e2e/seed.sql"
   },
   "packageManager": "bun@1.4.4",
   "ignoreScripts": [
@@ -46,7 +48,10 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.14.0",
     "@biomejs/biome": "2.6.8",
+    "@clerk/testing": "2.3.6",
+    "@playwright/test": "1.65.1",
     "@tailwindcss/postcss": "^4.3.5",
     "@tailwindcss/typography": "^0.5.20",
     "@testing-library/dom": "^10.4.2",

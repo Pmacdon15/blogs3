@@ -94,7 +94,7 @@ export function CodeSnippet({
               <button
                 aria-pressed={active}
                 className={cn(
-                  "inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 font-sans text-[11px] transition-colors",
+                  "inline-flex min-h-6 items-center gap-1.5 rounded-md px-2 py-0.5 font-sans text-[11px] transition-colors",
                   active ? palette.pillActive : palette.pillIdle,
                 )}
                 key={option}

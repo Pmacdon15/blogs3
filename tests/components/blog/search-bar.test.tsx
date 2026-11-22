@@ -102,7 +102,7 @@ describe("SearchBar", () => {
     expect(mocks.usePostSearch).toHaveBeenLastCalledWith("post");
     expect(input()).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByRole("status")).toHaveTextContent("2 results");
-    expect(screen.getByRole("link", { name: /Post one/ })).toHaveAttribute(
+    expect(screen.getByRole("option", { name: /Post one/ })).toHaveAttribute(
       "href",
       "/blog/one",
     );
@@ -170,7 +170,7 @@ describe("SearchBar", () => {
 
   it("activates an option on hover and closes after a click", async () => {
     const user = await typeQuery("post");
-    const link = screen.getByRole("link", { name: /Post two/ });
+    const link = screen.getByRole("option", { name: /Post two/ });
     await user.hover(link);
     expect(screen.getAllByRole("option")[1]).toHaveAttribute(
       "aria-selected",
