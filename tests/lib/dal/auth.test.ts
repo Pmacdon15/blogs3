@@ -28,15 +28,27 @@ beforeEach(() => {
 });
 
 describe("isAdmin", () => {
-  it("lets any signed-in user in outside production when no admins are listed", async () => {
+  it("lets any signed-in user in during local development when no admins are listed", async () => {
     await expect(isAdmin("user_1")).resolves.toBe(true);
-    vi.stubEnv("VERCEL_ENV", "preview");
+    vi.stubEnv("VERCEL_ENV", "development");
     await expect(isAdmin("user_1")).resolves.toBe(true);
   });
 
   it("lets nobody in on production when no admins are listed", async () => {
     vi.stubEnv("VERCEL_ENV", "production");
     await expect(isAdmin("user_1")).resolves.toBe(false);
+  });
+
+  it("lets nobody in on a preview deployment when no admins are listed", async () => {
+    vi.stubEnv("VERCEL_ENV", "preview");
+    await expect(isAdmin("user_1")).resolves.toBe(false);
+  });
+
+  it("still lets listed admins in on a preview deployment", async () => {
+    vi.stubEnv("VERCEL_ENV", "preview");
+    vi.stubEnv("ADMIN_USER_IDS", "user_1");
+    await expect(isAdmin("user_1")).resolves.toBe(true);
+    await expect(isAdmin("user_2")).resolves.toBe(false);
   });
 
   it("matches listed user ids, comma or space separated, any case", async () => {

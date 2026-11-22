@@ -4,6 +4,7 @@ import type { Route } from "next";
 import { redirect } from "next/navigation";
 import { cache } from "react";
 import { dbGetPrimaryEmail } from "@/db/users";
+import { isLocalDevelopment } from "@/lib/deployment";
 
 /*
  * Who may edit. Auth is only checked for editing and for unpublished posts;
@@ -11,8 +12,9 @@ import { dbGetPrimaryEmail } from "@/db/users";
  *
  * Admins are users listed in ADMIN_USER_IDS, or whose primary email is in
  * ADMIN_EMAILS (both comma/space separated). With both empty, every signed-in
- * user is an admin outside production, and nobody is in production (fail
- * closed: anyone can sign up through Clerk).
+ * user is an admin in local development only, and nobody is on any Vercel
+ * deployment, previews included (fail closed: anyone can sign up through
+ * Clerk).
  */
 
 function parseList(raw: string | undefined) {
@@ -26,7 +28,7 @@ export async function isAdmin(userId: string): Promise<boolean> {
   const ids = parseList(process.env.ADMIN_USER_IDS);
   const emails = parseList(process.env.ADMIN_EMAILS);
   if (ids.length === 0 && emails.length === 0) {
-    return process.env.VERCEL_ENV !== "production";
+    return isLocalDevelopment();
   }
   if (ids.includes(userId.toLowerCase())) return true;
   if (emails.length === 0) return false;
