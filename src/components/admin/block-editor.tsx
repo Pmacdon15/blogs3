@@ -3,11 +3,15 @@
 import {
   ArrowDown,
   ArrowUp,
+  Bold,
   Code2,
+  Code as CodeIcon,
   Copy,
   GripVertical,
   Heading2,
   Image as ImageIcon,
+  Italic,
+  Link2,
   Plus,
   Trash2,
   Type,
@@ -47,6 +51,11 @@ import {
   type CodeTheme,
   DEFAULT_CODE_THEME,
 } from "@/lib/code-highlight";
+import {
+  applyFormat,
+  FORMAT_SHORTCUTS,
+  type InlineFormat,
+} from "@/lib/inline-format";
 import {
   type Block,
   type BlockType,
@@ -381,25 +390,15 @@ function BlockFields({
         </>
       );
     }
-    case "text": {
-      const error = errorFor(errors, `${prefix}.text`);
+    case "text":
       return (
-        <>
-          <AutoTextarea
-            aria-describedby={`${id}-error`}
-            aria-invalid={error ? true : undefined}
-            aria-label={label}
-            className="w-full bg-transparent text-[15px] text-ink leading-relaxed outline-none placeholder:text-muted/60"
-            onChange={(event) =>
-              onChange({ ...block, text: event.target.value })
-            }
-            placeholder="Write something… (blank lines start new paragraphs)"
-            value={block.text}
-          />
-          <FieldError id={`${id}-error`} message={error} />
-        </>
+        <TextFields
+          block={block}
+          error={errorFor(errors, `${prefix}.text`)}
+          label={label}
+          onChange={onChange}
+        />
       );
-    }
     case "image":
       return (
         <div className="grid gap-3">
@@ -469,6 +468,113 @@ function BlockFields({
         />
       );
   }
+}
+
+type TextBlock = Extract<Block, { type: "text" }>;
+
+const FORMAT_BUTTONS: {
+  format: InlineFormat;
+  label: string;
+  shortcut: string;
+  Icon: typeof Type;
+}[] = [
+  { format: "bold", label: "Bold", shortcut: "B", Icon: Bold },
+  { format: "italic", label: "Italic", shortcut: "I", Icon: Italic },
+  { format: "code", label: "Inline code", shortcut: "E", Icon: CodeIcon },
+  { format: "link", label: "Link", shortcut: "K", Icon: Link2 },
+];
+
+/*
+ * A text block: a textarea with a small toolbar (and Ctrl/⌘ shortcuts) that
+ * wraps the selection in **bold**, *italic*, `code` or [link](url) markers.
+ */
+function TextFields({
+  block,
+  label,
+  error,
+  onChange,
+}: {
+  block: TextBlock;
+  label: string;
+  error?: string;
+  onChange: (block: Block) => void;
+}) {
+  const id = useId();
+  const ref = useRef<HTMLTextAreaElement>(null);
+  const selection = useRef<{ start: number; end: number } | null>(null);
+
+  // After formatting, restore focus and select the wrapped text (or link URL).
+  useLayoutEffect(() => {
+    if (selection.current && ref.current) {
+      ref.current.focus();
+      ref.current.setSelectionRange(
+        selection.current.start,
+        selection.current.end,
+      );
+      selection.current = null;
+    }
+  });
+
+  function format(kind: InlineFormat) {
+    const element = ref.current as HTMLTextAreaElement;
+    const next = applyFormat(
+      block.text,
+      element.selectionStart,
+      element.selectionEnd,
+      kind,
+    );
+    selection.current = { start: next.start, end: next.end };
+    onChange({ ...block, text: next.value });
+  }
+
+  function onKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (!(event.ctrlKey || event.metaKey) || event.altKey || event.shiftKey)
+      return;
+    const kind = FORMAT_SHORTCUTS[event.key.toLowerCase()];
+    if (!kind) return;
+    event.preventDefault();
+    format(kind);
+  }
+
+  return (
+    <>
+      <div
+        aria-controls={`${id}-text`}
+        aria-label={`Format ${label}`}
+        className="-mt-1 mb-2 flex items-center gap-0.5"
+        role="toolbar"
+      >
+        {FORMAT_BUTTONS.map(({ format: kind, label: name, shortcut, Icon }) => (
+          <button
+            aria-keyshortcuts={`Control+${shortcut} Meta+${shortcut}`}
+            aria-label={name}
+            className={iconButton}
+            key={kind}
+            // Keep the textarea's selection when the button is clicked.
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={() => format(kind)}
+            title={`${name} (Ctrl/⌘+${shortcut})`}
+            type="button"
+          >
+            <Icon aria-hidden="true" className="size-4" />
+          </button>
+        ))}
+      </div>
+      <AutoTextarea
+        aria-describedby={`${id}-error`}
+        aria-invalid={error ? true : undefined}
+        aria-label={label}
+        className="w-full bg-transparent text-[15px] text-ink leading-relaxed outline-none placeholder:text-muted/60"
+        id={`${id}-text`}
+        onChange={(event) => onChange({ ...block, text: event.target.value })}
+        onKeyDown={onKeyDown}
+        placeholder="Write something… (blank lines start new paragraphs)"
+        ref={ref}
+        value={block.text}
+      />
+      <FieldError id={`${id}-error`} message={error} />
+    </>
+  );
 }
 
 type CodeBlock = Extract<Block, { type: "code" }>;

@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { CodeSnippet } from "@/components/blog/code-snippet";
+import { InlineText } from "@/components/blog/inline-text";
 import type { Block } from "@/lib/schemas";
 
 /** Images on our Blob store go through next/image; any other host is shown as-is. */
@@ -22,7 +23,8 @@ export function paragraphs(text: string) {
 /*
  * Renders a post body. Server-safe (no hooks), so the public page, the admin
  * preview and anything else can share it. Text is rendered as text (React
- * escapes it), never as HTML.
+ * escapes it), never as HTML; text blocks support inline **bold**, *italic*,
+ * `code` and [links](url).
  */
 export function PostBlocks({ blocks }: { blocks: Block[] }) {
   return (
@@ -43,7 +45,7 @@ export function PostBlock({ block }: { block: Block }) {
         <>
           {paragraphs(block.text).map((paragraph) => (
             <p className="whitespace-pre-line" key={paragraph.key}>
-              {paragraph.text}
+              <InlineText text={paragraph.text} />
             </p>
           ))}
         </>

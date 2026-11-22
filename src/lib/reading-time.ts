@@ -1,3 +1,4 @@
+import { stripInline } from "@/lib/inline-format";
 import type { Block } from "@/lib/schemas";
 
 /** Average adult reading speed for prose, in words per minute. */
@@ -10,8 +11,9 @@ export function countWords(text: string) {
 function blockText(block: Block) {
   switch (block.type) {
     case "heading":
-    case "text":
       return block.text;
+    case "text":
+      return stripInline(block.text);
     case "code":
       return block.code;
     case "image":
