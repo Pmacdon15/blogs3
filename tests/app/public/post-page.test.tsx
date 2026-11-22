@@ -59,6 +59,10 @@ describe("post page", () => {
     expect(html).toContain("Some words here.");
     expect(html).toContain('type="application/ld+json"');
     expect(html).toContain('"@type":"BlogPosting"');
+    expect(html).toContain("Share this post");
+    expect(html).toContain(
+      encodeURIComponent("http://localhost:3000/blog/hello-world"),
+    );
   });
 
   it("renders a post without excerpt or cover", async () => {
