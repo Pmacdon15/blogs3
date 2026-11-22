@@ -40,6 +40,7 @@ import {
   dbSearchPublishedPosts,
   dbSetPostStatus,
   dbUpdatePost,
+  FIRST_PAGE_SIZE,
   toPost,
   toSummary,
 } from "@/db/posts";
@@ -99,15 +100,43 @@ describe("row mapping", () => {
 });
 
 describe("public reads", () => {
-  it("lists published posts, newest first, without caching here", async () => {
-    await expect(dbListPublishedPosts()).resolves.toEqual([summary]);
+  it("lists the first page of published posts, newest first, without caching here", async () => {
+    await expect(dbListPublishedPosts()).resolves.toEqual({
+      posts: [summary],
+      nextCursor: null,
+    });
     expect(lastCall().text).toBe(
-      "select * from posts where status = 'published' order by published_at desc limit ?",
+      "select * from posts where status = 'published' order by published_at desc, id desc limit ?",
     );
-    expect(lastCall().values).toEqual([50]);
-    await dbListPublishedPosts(5);
-    expect(lastCall().values).toEqual([5]);
+    expect(lastCall().values).toEqual([FIRST_PAGE_SIZE + 1]);
     expect(mocks.cacheTag).not.toHaveBeenCalled();
+  });
+
+  it("returns a cursor after the last post when another page follows", async () => {
+    mocks.state.rows = [row, { ...row, id: "p2" }];
+    await expect(dbListPublishedPosts(1)).resolves.toEqual({
+      posts: [summary],
+      nextCursor: { before: summary.publishedAt, beforeId: "p1" },
+    });
+    expect(lastCall().values).toEqual([2]);
+  });
+
+  it("lists the page after a cursor", async () => {
+    const cursor = {
+      before: "2026-01-05T00:00:00.000Z",
+      beforeId: "00000000-0000-4000-8000-000000000000",
+    };
+    await dbListPublishedPosts(12, cursor);
+    expect(lastCall().text).toBe(
+      "select * from posts where status = 'published' and (published_at, id) < (?::timestamptz, ?::uuid) order by published_at desc, id desc limit ?",
+    );
+    expect(lastCall().values).toEqual([cursor.before, cursor.beforeId, 13]);
+  });
+
+  it("gives no cursor when the last post has no publish date", async () => {
+    mocks.state.rows = [{ ...row, published_at: null }, row];
+    const page = await dbListPublishedPosts(1);
+    expect(page.nextCursor).toBeNull();
   });
 
   it("finds a published post by slug", async () => {

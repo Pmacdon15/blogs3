@@ -105,7 +105,7 @@ vi.mock("next/image", () => ({
 
 // An empty blog: cached reads resolve right away with nothing in them.
 vi.mock("@/db/posts", () => ({
-  dbListPublishedPosts: vi.fn(async () => []),
+  dbListPublishedPosts: vi.fn(async () => ({ posts: [], nextCursor: null })),
   dbGetPublishedPostBySlug: vi.fn(async () => null),
   dbSearchPublishedPosts: vi.fn(async () => []),
   dbListAllPosts: vi.fn(async () => []),

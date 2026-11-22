@@ -20,12 +20,24 @@ vi.mock("@/hooks/use-post-search", () => ({
   MIN_SEARCH_LENGTH: 2,
   usePostSearch: () => ({ data: undefined, isError: false, isFetching: false }),
 }));
+vi.mock("@/hooks/use-post-pages", () => ({
+  usePostPages: () => ({
+    data: { pages: [{ posts: [], nextCursor: {} }] },
+    hasNextPage: true,
+    isFetchingNextPage: false,
+    isError: false,
+    fetchNextPage: vi.fn(),
+  }),
+}));
 
 import HomePage, { metadata } from "@/app/(public)/page";
 
 describe("home page", () => {
   beforeEach(() => {
-    mocks.dbListPublishedPosts.mockResolvedValue([]);
+    mocks.dbListPublishedPosts.mockResolvedValue({
+      posts: [],
+      nextCursor: null,
+    });
   });
 
   it("exports canonical home page SEO metadata", () => {
@@ -54,13 +66,26 @@ describe("home page", () => {
       makeSummary({ id: "a", slug: "first", title: "First post" }),
       makeSummary({ id: "b", slug: "second", title: "Second post" }),
     ];
-    mocks.dbListPublishedPosts.mockResolvedValue(posts);
+    mocks.dbListPublishedPosts.mockResolvedValue({ posts, nextCursor: null });
     const html = await renderToHtml(<HomePage />);
     expect(mocks.cacheLife).toHaveBeenCalledWith("hours");
     expect(mocks.cacheTag).toHaveBeenCalledWith("posts:published");
     expect(html).toContain("First post");
     expect(html).toContain('href="/blog/second"');
     expect(html).toContain("Featured");
+    expect(html).not.toContain("Load more posts");
+  });
+
+  it("offers more posts when another page follows", async () => {
+    mocks.dbListPublishedPosts.mockResolvedValue({
+      posts: [makeSummary()],
+      nextCursor: {
+        before: "2026-11-19T10:00:00.000Z",
+        beforeId: "00000000-0000-4000-8000-000000000000",
+      },
+    });
+    const html = await renderToHtml(<HomePage />);
+    expect(html).toContain("Load more posts");
   });
 
   it("shows an empty state when nothing is published", async () => {

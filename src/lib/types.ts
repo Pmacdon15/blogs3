@@ -1,4 +1,4 @@
-import type { Block } from "@/lib/schemas";
+import type { Block, PostCursor } from "@/lib/schemas";
 
 export type PostStatus = "draft" | "published";
 
@@ -20,6 +20,9 @@ export type Post = {
 
 /** What lists and search results need: no blocks. */
 export type PostSummary = Omit<Post, "blocks" | "authorId">;
+
+/** One page of published posts and where the next one starts (null: last page). */
+export type PostPage = { posts: PostSummary[]; nextCursor: PostCursor | null };
 
 /** Minimal fields needed to build sitemap entries without loading post bodies. */
 export type SitemapPost = Pick<Post, "slug" | "updatedAt" | "coverImageUrl">;

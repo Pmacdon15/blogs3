@@ -252,11 +252,12 @@ AI app ── MCP tools/call ──▶ /api/mcp ──▶ DAL ──▶ db
                                  └─ revalidatePostCaches(change)
 
 search box ── useQuery ──▶ /api/posts/search ──▶ db (published posts only)
+home list ─ useInfiniteQuery ─▶ /api/posts?before&beforeId ──▶ db (next page)
 ```
 
 - **DAL** (`src/lib/dal`): the only way to read drafts or write. Every function takes the caller's user ID first (from the Clerk session, or the verified OAuth token for MCP), checks that they are an admin, validates input with the shared Zod schemas in [`src/lib/schemas.ts`](src/lib/schemas.ts), and returns a `Result`.
 - **Zod everywhere**: the editor validates with the same schemas before calling an action, and the server parses again.
-- **TanStack Query**: used only for client-side fetching (such as live search), calling API routes (`src/app/api/*`).
+- **TanStack Query**: used only for client-side fetching (live search and the home page's infinite scroll), calling API routes (`src/app/api/*`).
 
 ---
 

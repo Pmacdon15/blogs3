@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { cacheLife, cacheTag } from "next/cache";
 import { Suspense } from "react";
+import { MorePosts } from "@/components/blog/more-posts";
 import { PostList } from "@/components/blog/post-list";
 import { SearchBar } from "@/components/blog/search-bar";
 import { JsonLd } from "@/components/seo/json-ld";
@@ -81,6 +82,11 @@ async function LatestPosts() {
   "use cache";
   cacheLife("hours");
   cacheTag(CACHE_TAGS.publishedPosts);
-  const posts = await dbListPublishedPosts();
-  return <PostList posts={posts} />;
+  const { posts, nextCursor } = await dbListPublishedPosts();
+  return (
+    <div className="flex flex-col gap-6">
+      <PostList posts={posts} />
+      {nextCursor ? <MorePosts cursor={nextCursor} /> : null}
+    </div>
+  );
 }
