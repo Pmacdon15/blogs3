@@ -413,3 +413,64 @@ describe("BlockEditor", () => {
     expect(latest.map((block) => block.id)).toEqual(["b", "c", "a"]);
   });
 });
+
+describe("text formatting toolbar", () => {
+  const text = (value: string): Block => ({
+    id: "t",
+    type: "text",
+    text: value,
+  });
+  const box = () =>
+    screen.getByLabelText("Text block 1") as HTMLTextAreaElement;
+  const format = () =>
+    screen.getByRole("toolbar", { name: "Format Text block 1" });
+
+  it("wraps the selection from the buttons and keeps it selected", async () => {
+    const user = userEvent.setup();
+    renderWithClient(<Harness initial={[text("say hi")]} />);
+    box().setSelectionRange(4, 6);
+    await user.click(within(format()).getByRole("button", { name: "Bold" }));
+    expect(latest[0]).toMatchObject({ text: "say **hi**" });
+    expect(box()).toHaveFocus();
+    expect([box().selectionStart, box().selectionEnd]).toEqual([6, 8]);
+
+    // Clicking again unwraps it.
+    await user.click(within(format()).getByRole("button", { name: "Bold" }));
+    expect(latest[0]).toMatchObject({ text: "say hi" });
+
+    for (const [name, expected] of [
+      ["Italic", "say *hi*"],
+      ["Inline code", "say *`hi`*"],
+    ]) {
+      await user.click(within(format()).getByRole("button", { name }));
+      expect(latest[0]).toMatchObject({ text: expected });
+    }
+
+    await user.click(within(format()).getByRole("button", { name: "Link" }));
+    expect(latest[0]).toMatchObject({ text: "say *`[hi](https://)`*" });
+    expect(box().value.slice(box().selectionStart, box().selectionEnd)).toBe(
+      "https://",
+    );
+  });
+
+  it("formats with Ctrl/⌘ shortcuts and ignores other keys", () => {
+    renderWithClient(<Harness initial={[text("hi")]} />);
+    box().setSelectionRange(0, 2);
+    fireEvent.keyDown(box(), { key: "b", ctrlKey: true });
+    expect(latest[0]).toMatchObject({ text: "**hi**" });
+    fireEvent.keyDown(box(), { key: "I", metaKey: true });
+    expect(latest[0]).toMatchObject({ text: "***hi***" });
+
+    fireEvent.keyDown(box(), { key: "b" });
+    fireEvent.keyDown(box(), { key: "b", ctrlKey: true, shiftKey: true });
+    fireEvent.keyDown(box(), { key: "b", ctrlKey: true, altKey: true });
+    fireEvent.keyDown(box(), { key: "z", ctrlKey: true });
+    expect(latest[0]).toMatchObject({ text: "***hi***" });
+  });
+
+  it("keeps the textarea selection when a button is pressed", () => {
+    renderWithClient(<Harness initial={[text("hi")]} />);
+    const bold = within(format()).getByRole("button", { name: "Bold" });
+    expect(fireEvent.mouseDown(bold)).toBe(false);
+  });
+});

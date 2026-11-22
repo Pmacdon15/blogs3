@@ -10,7 +10,7 @@ Who can do what:
 
 Posts and blocks:
 - A post has a title, a slug (its URL, /blog/<slug>), an excerpt, tags, an optional cover image and a body made of blocks. New posts are drafts until publish_post.
-- Block types: heading { text }, text { text } (paragraphs separated by a blank line, plain text, no HTML), image { url, alt, caption? } (an https URL) and code { language, code }.
+- Block types: heading { text }, text { text } (paragraphs separated by a blank line, no HTML; inline **bold**, *italic*, \`code\` and [label](https://url) work), image { url, alt, caption? } (an https URL) and code { language, code }.
 - Use create_post with the whole body for a new post. For changes to one block use add_block, update_block, remove_block or move_block (they take the block ids that get_post shows); use update_post to change the title, slug, excerpt, tags or cover, or to replace the whole body at once.
 - To put a picture in a post, call upload_image with an https URL or base64 data first, then use the returned URL in an image block or as coverImageUrl.
 

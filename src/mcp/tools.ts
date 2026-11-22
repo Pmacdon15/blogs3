@@ -71,7 +71,7 @@ const newBlocks = z
   .array(newBlockSchema)
   .max(MAX_BLOCKS)
   .describe(
-    "The post body, in order. Each block is a heading, text (paragraphs separated by blank lines), image (an https URL, e.g. from upload_image, with alt text) or code block. Block ids are optional; new blocks get one.",
+    "The post body, in order. Each block is a heading, text (paragraphs separated by blank lines; inline **bold**, *italic*, `code` and [label](url) links), image (an https URL, e.g. from upload_image, with alt text) or code block. Block ids are optional; new blocks get one.",
   );
 
 export const whoamiInputSchema = z.object({});

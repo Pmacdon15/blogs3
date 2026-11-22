@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { stripInline } from "@/lib/inline-format";
 import {
   countWords,
   formatReadingTime,
@@ -50,5 +51,15 @@ describe("readingMinutes", () => {
 describe("formatReadingTime", () => {
   it("labels minutes", () => {
     expect(formatReadingTime(4)).toBe("4 min read");
+  });
+});
+
+describe("inline formatting", () => {
+  it("ignores inline formatting markers and link URLs", () => {
+    expect(countWords(stripInline("**a** [b c](https://x.dev/long)"))).toBe(3);
+    const text = Array.from({ length: WORDS_PER_MINUTE }, () => "[w](/x)").join(
+      " ",
+    );
+    expect(readingMinutes([{ id: "t", type: "text", text }])).toBe(1);
   });
 });

@@ -1,6 +1,6 @@
 "use client";
 
-import type { ComponentProps } from "react";
+import type { ComponentProps, RefObject } from "react";
 import { cn } from "@/lib/cn";
 
 /** Grows a textarea to fit its content. */
@@ -17,8 +17,11 @@ export function fitToContent(element: HTMLTextAreaElement | null) {
 export function AutoTextarea({
   className,
   onInput,
+  ref,
   ...props
-}: ComponentProps<"textarea">) {
+}: ComponentProps<"textarea"> & {
+  ref?: RefObject<HTMLTextAreaElement | null>;
+}) {
   return (
     <textarea
       className={cn(
@@ -29,7 +32,10 @@ export function AutoTextarea({
         fitToContent(event.currentTarget);
         onInput?.(event);
       }}
-      ref={fitToContent}
+      ref={(element) => {
+        fitToContent(element);
+        if (ref) ref.current = element;
+      }}
       rows={3}
       {...props}
     />

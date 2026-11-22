@@ -150,6 +150,12 @@ describe("AutoTextarea", () => {
     expect(onInput).toHaveBeenCalled();
   });
 
+  it("forwards its element to a ref", () => {
+    const ref = { current: null as HTMLTextAreaElement | null };
+    render(<AutoTextarea aria-label="Body" defaultValue="" ref={ref} />);
+    expect(ref.current).toBe(screen.getByRole("textbox"));
+  });
+
   it("works without an input handler and ignores null elements", () => {
     render(<AutoTextarea aria-label="Body" defaultValue="" />);
     fireEvent.input(screen.getByRole("textbox"), { target: { value: "x" } });

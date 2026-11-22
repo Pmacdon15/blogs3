@@ -37,7 +37,7 @@ export function draftPostPromptText(args: DraftPostArgs): string {
     "",
     "Steps:",
     "1. Propose a title, a one-sentence excerpt, up to 5 lowercase tags and a short outline. Wait for my OK or changes.",
-    "2. Write the post as blocks: heading blocks for sections, text blocks for paragraphs (plain text, blank line between paragraphs), code blocks with a language for any code, and image blocks only for images I give you (upload them with upload_image first).",
+    "2. Write the post as blocks: heading blocks for sections, text blocks for paragraphs (blank line between paragraphs; inline **bold**, *italic*, `code` and [label](url) links are allowed, no HTML), code blocks with a language for any code, and image blocks only for images I give you (upload them with upload_image first).",
     "3. Call create_post with the title, excerpt, tags and blocks. It saves a draft; show me the preview.",
     "4. Apply my edits with update_block, add_block, remove_block, move_block or update_post.",
     "5. Only call publish_post when I say to publish.",

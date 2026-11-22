@@ -78,4 +78,32 @@ describe("PostBlocks", () => {
     fireEvent.click(screen.getByRole("button", { name: "Dracula" }));
     expect(snippet).toHaveAttribute("data-code-theme", "dracula");
   });
+
+  it("renders inline formatting in text blocks as elements", () => {
+    const { container } = render(
+      <PostBlocks
+        blocks={[
+          {
+            id: "t1",
+            type: "text",
+            text: "A **bold** *soft* `x()` [ext](https://a.dev) [home](/) [bad](javascript:x)",
+          },
+        ]}
+      />,
+    );
+    expect(container.querySelector("strong")).toHaveTextContent("bold");
+    expect(container.querySelector("em")).toHaveTextContent("soft");
+    expect(container.querySelector("p code")).toHaveTextContent("x()");
+    expect(screen.getByRole("link", { name: "ext" })).toHaveAttribute(
+      "rel",
+      "noopener noreferrer",
+    );
+    const home = screen.getByRole("link", { name: "home" });
+    expect(home).toHaveAttribute("href", "/");
+    expect(home).not.toHaveAttribute("rel");
+    expect(screen.queryByRole("link", { name: "bad" })).toBeNull();
+    expect(container.querySelector("p")).toHaveTextContent(
+      "[bad](javascript:x)",
+    );
+  });
 });
