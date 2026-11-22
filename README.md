@@ -74,11 +74,10 @@ Everything in this project is designed to run on Vercel with managed integration
 The MCP server at `/api/mcp` authenticates AI clients using **OAuth 2.1 with Dynamic Client Registration** powered by Clerk (`/.well-known/oauth-protected-resource` points clients directly to your Clerk instance). No long-lived API keys are needed.
 
 1. In the **Clerk Dashboard**, open your application and ensure **OAuth / Dynamic Client Registration** is enabled so MCP clients (Claude, ChatGPT, Cursor, etc.) can register themselves and request the `profile`, `email`, and `offline_access` scopes.
-2. In your Vercel Environment Variables, set `MCP_ALLOWED_OAUTH_CLIENT_IDS`:
-   - Like admin access, this **fails closed in production** when unset.
-   - Set `MCP_ALLOWED_OAUTH_CLIENT_IDS=*` to allow any OAuth client where you sign in with your Clerk account (the DAL still verifies that the signed-in user is in `ADMIN_EMAILS` / `ADMIN_USER_IDS` before any private read or write).
+2. _(Optional)_ Restrict which OAuth clients may connect with `MCP_ALLOWED_OAUTH_CLIENT_IDS`:
+   - By default (unset, empty, or `*`) the MCP server accepts **any** OAuth client, in every environment. Anyone can connect, but only public tools (`search_published_posts`, `whoami`) work for them: the DAL still verifies that the signed-in user is in `ADMIN_EMAILS` / `ADMIN_USER_IDS` before any private read or write.
    - Or set it to a comma-separated list of specific Clerk OAuth client IDs (`client_...`) once your AI client has registered.
-3. _(Optional)_ If you enable RFC 8707 OAuth token audience claims in the Clerk dashboard, you can set `MCP_TOKEN_AUDIENCE=enforce` to require tokens to carry `aud: https://<your-domain>/api/mcp`. By default it is `log` in production and `off` elsewhere.
+3. _(Optional)_ If you enable RFC 8707 OAuth token audience claims in the Clerk dashboard, you can set `MCP_TOKEN_AUDIENCE=enforce` to require tokens to carry `aud: https://<your-domain>/api/mcp`. By default it is `log` everywhere (never enforced unless you set it).
 
 Redeploy your Vercel project after saving your environment variables.
 
@@ -209,8 +208,8 @@ bun run db:schema
 | `BLOB_READ_WRITE_TOKEN`             | Yes (for uploads) | Vercel Blob read/write token for storing uploaded cover and post images.                                                                                                                                                                                                       |
 | `ADMIN_EMAILS`                      | In production     | Comma- or space-separated primary email addresses allowed to use `/admin` and MCP admin tools.                                                                                                                                                                                 |
 | `ADMIN_USER_IDS`                    | In production     | Comma- or space-separated Clerk user IDs (`user_...`) allowed to use `/admin` and MCP admin tools. (Provide `ADMIN_EMAILS`, `ADMIN_USER_IDS`, or both. If both are empty, everyone signed in is an admin in local development and **nobody** is on Vercel, previews included.) |
-| `MCP_ALLOWED_OAUTH_CLIENT_IDS`      | In production     | Comma- or space-separated OAuth client IDs allowed to call `/api/mcp`, or `*` to allow any OAuth client. If unset, any client is allowed in local development and **none** on Vercel, previews included.                                                                       |
-| `MCP_TOKEN_AUDIENCE`                | Optional          | `off`, `log`, or `enforce` for validating RFC 8707 `aud` claims (`https://<domain>/api/mcp`) on Clerk OAuth tokens. Defaults to `off` in local development and `log` on Vercel (production and preview).                                                                       |
+| `MCP_ALLOWED_OAUTH_CLIENT_IDS`      | Optional          | Comma- or space-separated OAuth client IDs allowed to call `/api/mcp`, or `*` to allow any OAuth client. If unset, any client is allowed (in every environment).                                                                                                               |
+| `MCP_TOKEN_AUDIENCE`                | Optional          | `off`, `log`, or `enforce` for validating RFC 8707 `aud` claims (`https://<domain>/api/mcp`) on Clerk OAuth tokens. Defaults to `log` everywhere (never `enforce` unless set).                                                                                                 |
 | `NEXT_PUBLIC_SITE_URL`              | Optional          | Canonical origin (e.g. `https://blog.example.com`) for sitemaps, feeds, and OpenGraph URLs when not using `VERCEL_PROJECT_PRODUCTION_URL`.                                                                                                                                     |
 
 ---

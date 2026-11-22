@@ -47,43 +47,25 @@ describe("verifyMcpToken client allowlist", () => {
     expect(allowedOAuthClientIds(undefined)).toBeNull();
   });
 
-  it("fails closed outside local development when no allowlist is set, unless it is *", () => {
-    expect(allowedOAuthClientIds(undefined, false)).toEqual(new Set());
-    expect(allowedOAuthClientIds("  ", false)).toEqual(new Set());
-    expect(allowedOAuthClientIds("*", false)).toBeNull();
-    expect(allowedOAuthClientIds("client_a", false)).toEqual(
-      new Set(["client_a"]),
-    );
+  it("accepts every client when the allowlist is unset, empty or *", () => {
+    expect(allowedOAuthClientIds("  ")).toBeNull();
+    expect(allowedOAuthClientIds("*")).toBeNull();
+    expect(allowedOAuthClientIds("client_a, *")).toBeNull();
+    expect(allowedOAuthClientIds("client_a")).toEqual(new Set(["client_a"]));
   });
 
-  it("fails closed on a preview deployment when no allowlist is set", () => {
-    vi.stubEnv("VERCEL_ENV", "preview");
-    expect(allowedOAuthClientIds(undefined)).toEqual(new Set());
-  });
+  it.each(["production", "preview"])(
+    "accepts any client on %s when no allowlist is set",
+    async (env) => {
+      vi.stubEnv("VERCEL_ENV", env);
+      vi.stubEnv("MCP_ALLOWED_OAUTH_CLIENT_IDS", "");
+      vi.stubEnv("MCP_TOKEN_AUDIENCE", "off");
+      mockAuthenticateRequest.mockResolvedValueOnce(tokenState("client_x"));
 
-  it("rejects every token on a preview deployment when no allowlist is set", async () => {
-    vi.stubEnv("VERCEL_ENV", "preview");
-    vi.stubEnv("MCP_ALLOWED_OAUTH_CLIENT_IDS", "");
-    vi.stubEnv("MCP_TOKEN_AUDIENCE", "off");
-    mockAuthenticateRequest.mockResolvedValueOnce(tokenState("client_x"));
-
-    expect(await verifyMcpToken(req, "oat_1")).toBeUndefined();
-    expect(console.warn).toHaveBeenCalledWith(
-      expect.stringContaining("not set outside local development"),
-    );
-  });
-
-  it("rejects every token in production when no allowlist is set", async () => {
-    vi.stubEnv("VERCEL_ENV", "production");
-    vi.stubEnv("MCP_ALLOWED_OAUTH_CLIENT_IDS", "");
-    vi.stubEnv("MCP_TOKEN_AUDIENCE", "off");
-    mockAuthenticateRequest.mockResolvedValueOnce(tokenState("client_x"));
-
-    expect(await verifyMcpToken(req, "oat_1")).toBeUndefined();
-    expect(console.warn).toHaveBeenCalledWith(
-      expect.stringContaining("not set outside local development"),
-    );
-  });
+      const info = await verifyMcpToken(req, "oat_1");
+      expect(info?.clientId).toBe("client_x");
+    },
+  );
 
   it("accepts any client in production when the allowlist is *", async () => {
     vi.stubEnv("VERCEL_ENV", "production");
@@ -137,25 +119,19 @@ describe("verifyMcpToken audience check", () => {
   it("reads the mode from MCP_TOKEN_AUDIENCE", () => {
     expect(audienceMode(" Enforce ")).toBe("enforce");
     expect(audienceMode("log")).toBe("log");
-    expect(audienceMode("yes")).toBe("off");
-    expect(audienceMode(undefined)).toBe("off");
     expect(audienceMode("off")).toBe("off");
   });
 
-  it("defaults to log outside local development unless explicitly set", () => {
-    expect(audienceMode(undefined, false)).toBe("log");
-    expect(audienceMode("yes", false)).toBe("log");
-    expect(audienceMode("off", false)).toBe("off");
-    expect(audienceMode("log", false)).toBe("log");
-    expect(audienceMode("enforce", false)).toBe("enforce");
+  it("defaults to log everywhere, never enforce", () => {
+    for (const env of ["", "development", "preview", "production"]) {
+      vi.stubEnv("VERCEL_ENV", env);
+      expect(audienceMode(undefined)).toBe("log");
+      expect(audienceMode("")).toBe("log");
+      expect(audienceMode("yes")).toBe("log");
+    }
   });
 
-  it("defaults to log on a preview deployment", () => {
-    vi.stubEnv("VERCEL_ENV", "preview");
-    expect(audienceMode(undefined)).toBe("log");
-  });
-
-  it("logs but accepts a token without aud in production when MCP_TOKEN_AUDIENCE is unset", async () => {
+  it("logs but accepts a token without aud when MCP_TOKEN_AUDIENCE is unset", async () => {
     vi.stubEnv("VERCEL_ENV", "production");
     vi.stubEnv("MCP_ALLOWED_OAUTH_CLIENT_IDS", "client_x");
     vi.stubEnv("MCP_TOKEN_AUDIENCE", "");
@@ -171,7 +147,7 @@ describe("verifyMcpToken audience check", () => {
   });
 
   it("skips the extra Clerk call when off", async () => {
-    vi.stubEnv("MCP_TOKEN_AUDIENCE", "");
+    vi.stubEnv("MCP_TOKEN_AUDIENCE", "off");
     expect(await verifyMcpToken(req, "oat_1")).toBeDefined();
     expect(mockVerifyAccessToken).not.toHaveBeenCalled();
   });

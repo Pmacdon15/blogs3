@@ -1,6 +1,5 @@
 import { clerkClient } from "@clerk/nextjs/server";
 import type { AuthInfo } from "@modelcontextprotocol/server";
-import { isLocalDevelopment } from "@/lib/deployment";
 import { mcpResourceUrl } from "@/mcp/http";
 
 /*
@@ -20,23 +19,19 @@ import { mcpResourceUrl } from "@/mcp/http";
  * signed in with this Clerk instance. Setting the allowlist limits the MCP
  * server to the clients you trust.
  *
- * Returns null when every client is accepted: `*`, or unset/empty in local
- * development. On any Vercel deployment (production or preview) an unset or
- * empty list fails closed (an empty set, so every token is rejected) because
- * dynamic client registration lets anyone register a client on the Clerk
- * instance.
+ * Returns null when every client is accepted: `*`, or unset/empty (in every
+ * environment). The MCP server is open to any client by default; admin
+ * rights (see `@/lib/dal/auth`) still gate every private read and write.
  */
 export function allowedOAuthClientIds(
   raw = process.env.MCP_ALLOWED_OAUTH_CLIENT_IDS,
-  local = isLocalDevelopment(),
 ): Set<string> | null {
   const ids = (raw ?? "")
     .split(/[\s,]+/)
     .map((id) => id.trim())
     .filter(Boolean);
-  if (ids.includes("*")) return null;
-  if (ids.length > 0) return new Set(ids);
-  return local ? null : new Set();
+  if (ids.length === 0 || ids.includes("*")) return null;
+  return new Set(ids);
 }
 
 export type AudienceMode = "off" | "log" | "enforce";
@@ -48,16 +43,15 @@ export type AudienceMode = "off" | "log" | "enforce";
  * clients' tokens carry it before enforcing), and "off" skips the check.
  * Clerk only puts an `aud` claim in access tokens once audience claims are
  * turned on in the Clerk dashboard, so unset or unrecognised values default
- * to "off" in local development and "log" on any Vercel deployment
- * (production or preview). Each check is one extra Clerk Backend API call.
+ * to "log" everywhere ("enforce" is never the default). Each check is one
+ * extra Clerk Backend API call.
  */
 export function audienceMode(
   raw = process.env.MCP_TOKEN_AUDIENCE,
-  local = isLocalDevelopment(),
 ): AudienceMode {
   const mode = raw?.trim().toLowerCase();
   if (mode === "enforce" || mode === "log" || mode === "off") return mode;
-  return local ? "off" : "log";
+  return "log";
 }
 
 /** Whether the token was issued for this server, per {@link audienceMode}. */
@@ -129,9 +123,7 @@ async function verifyOAuthToken(
   const allowed = allowedOAuthClientIds();
   if (allowed && (!auth.clientId || !allowed.has(auth.clientId))) {
     console.warn(
-      allowed.size === 0
-        ? "MCP: rejected an OAuth access token because MCP_ALLOWED_OAUTH_CLIENT_IDS is not set outside local development (set it to your clients' IDs, or * to accept any client)"
-        : `MCP: rejected an OAuth access token from client ${auth.clientId ?? "(none)"}, which isn't in MCP_ALLOWED_OAUTH_CLIENT_IDS`,
+      `MCP: rejected an OAuth access token from client ${auth.clientId ?? "(none)"}, which isn't in MCP_ALLOWED_OAUTH_CLIENT_IDS`,
     );
     return undefined;
   }
