@@ -2,8 +2,14 @@ import "server-only";
 import { cacheLife, cacheTag } from "next/cache";
 import { sql } from "@/db/client";
 import { CACHE_TAGS } from "@/lib/cache/tags";
-import type { Block, PostInput, PostPatch } from "@/lib/schemas";
-import type { Post, PostStatus, PostSummary, SitemapPost } from "@/lib/types";
+import type { Block, PostCursor, PostInput, PostPatch } from "@/lib/schemas";
+import type {
+  Post,
+  PostPage,
+  PostStatus,
+  PostSummary,
+  SitemapPost,
+} from "@/lib/types";
 
 /*
  * Raw SQL for posts. No auth here: callers are the public pages (published
@@ -58,14 +64,45 @@ export function toSummary(row: PostRow): PostSummary {
 
 // ---------------------------------------------------------------- public reads
 
-export async function dbListPublishedPosts(limit = 50): Promise<PostSummary[]> {
-  const rows = (await sql()`
+/** Posts on the home page: the featured card plus four rows of three. */
+export const FIRST_PAGE_SIZE = 13;
+/** Posts per page loaded after the first: four more rows of three. */
+export const PAGE_SIZE = 12;
+
+/**
+ * One page of published posts, newest first. Keyset-paginated on
+ * (published_at, id) so posts published meanwhile never shift or repeat a page.
+ */
+export async function dbListPublishedPosts(
+  limit = FIRST_PAGE_SIZE,
+  cursor?: PostCursor,
+): Promise<PostPage> {
+  // One extra row says whether another page follows.
+  const rows = (
+    cursor
+      ? await sql()`
     select * from posts
     where status = 'published'
-    order by published_at desc
-    limit ${limit}
-  `) as PostRow[];
-  return rows.map(toSummary);
+      and (published_at, id) < (${cursor.before}::timestamptz, ${cursor.beforeId}::uuid)
+    order by published_at desc, id desc
+    limit ${limit + 1}
+  `
+      : await sql()`
+    select * from posts
+    where status = 'published'
+    order by published_at desc, id desc
+    limit ${limit + 1}
+  `
+  ) as PostRow[];
+  const posts = rows.slice(0, limit).map(toSummary);
+  const last = posts.at(-1);
+  return {
+    posts,
+    nextCursor:
+      rows.length > limit && last?.publishedAt
+        ? { before: last.publishedAt, beforeId: last.id }
+        : null,
+  };
 }
 
 export async function dbGetPublishedPostBySlug(

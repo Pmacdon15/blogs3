@@ -119,6 +119,14 @@ export const searchQuerySchema = z.object({
   q: z.string().trim().max(100).default(""),
 });
 
+/** Where the next page of published posts starts: after this post. */
+export const postCursorSchema = z.object({
+  before: z.iso.datetime(),
+  beforeId: z.uuid(),
+});
+
+export type PostCursor = z.infer<typeof postCursorSchema>;
+
 export const IMAGE_TYPES = [
   "image/png",
   "image/jpeg",
