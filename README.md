@@ -257,6 +257,7 @@ search box ── useQuery ──▶ /api/posts/search ──▶ db (published p
 - **DAL** (`src/lib/dal`): the only way to read drafts or write. Every function takes the caller's user ID first (from the Clerk session, or the verified OAuth token for MCP), checks that they are an admin, validates input with the shared Zod schemas in [`src/lib/schemas.ts`](src/lib/schemas.ts), and returns a `Result`.
 - **Zod everywhere**: the editor validates with the same schemas before calling an action, and the server parses again.
 - **TanStack Query**: used only for client-side fetching (such as live search), calling API routes (`src/app/api/*`).
+- **Rate limits** (`src/lib/rate-limit.ts`): `/api/posts/search` allows 60 searches a minute per client IP. `/api/mcp` allows 20 requests a minute per IP without a valid token (checked before the token goes to Clerk) and 120 calls a minute per signed-in user. Over the limit, the answer is `429` with `Retry-After`. Each server instance keeps its own counts in memory, so a client is blocked once it hits the limit on one instance. To cap requests across all instances, add a rate-limit rule in the Vercel Firewall.
 
 ---
 
