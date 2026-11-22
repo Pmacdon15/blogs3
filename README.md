@@ -66,7 +66,7 @@ Everything in this project is designed to run on Vercel with managed integration
 1. Add the **Clerk** integration from the Vercel Marketplace, or create an application at [dashboard.clerk.com](https://dashboard.clerk.com).
 2. Make sure `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY` are set in your Vercel project's Environment Variables.
 3. **Grant yourself admin permissions**:
-   - In production (`VERCEL_ENV=production`), admin access **fails closed** by default so strangers who sign up through Clerk cannot edit your blog.
+   - On every Vercel deployment (`VERCEL_ENV=production` or `preview`), admin access **fails closed** by default so strangers who sign up through Clerk cannot edit your blog. Preview deployments have public URLs and often share the production database, so they are treated like production.
    - Set `ADMIN_EMAILS` to your email address (e.g. `ADMIN_EMAILS=you@example.com`) or set `ADMIN_USER_IDS` to your Clerk User ID (`user_...`) in Vercel's Environment Variables. Both accept comma- or space-separated lists.
 
 ### 5. Enable Clerk OAuth for MCP
@@ -189,7 +189,7 @@ bun run dev
 
 [`docker-compose.yml`](docker-compose.yml) runs Postgres 17 behind [`local-neon-http-proxy`](https://github.com/TimoWilhelm/local-neon-http-proxy) and automatically applies [`schema.sql`](schema.sql) on first boot. Because `db.localtest.me` resolves to `127.0.0.1`, [`src/db/client.ts`](src/db/client.ts) routes the Neon serverless HTTP driver to `http://db.localtest.me:4444/sql` so local development works offline identically to production.
 
-Outside production (`VERCEL_ENV !== "production"`), leaving `ADMIN_USER_IDS` and `ADMIN_EMAILS` empty makes any signed-in Clerk user an admin automatically.
+In local development only (`VERCEL_ENV` unset or `development`), leaving `ADMIN_USER_IDS` and `ADMIN_EMAILS` empty makes any signed-in Clerk user an admin automatically.
 
 To re-apply the database schema at any time:
 
@@ -201,17 +201,17 @@ bun run db:schema
 
 ## Environment Variables Reference
 
-| Variable                            | Required          | Description                                                                                                                                                                                                                                               |
-| ----------------------------------- | ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `DATABASE_URL`                      | Yes               | Neon Postgres connection string (or `postgres://postgres:<pw>@db.localtest.me:5432/main` locally). Set automatically by the Vercel Neon integration.                                                                                                      |
-| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Yes               | Clerk publishable key (`pk_test_...` or `pk_live_...`). Also used to derive the OAuth issuer URL for MCP discovery.                                                                                                                                       |
-| `CLERK_SECRET_KEY`                  | Yes               | Clerk secret key (`sk_test_...` or `sk_live_...`).                                                                                                                                                                                                        |
-| `BLOB_READ_WRITE_TOKEN`             | Yes (for uploads) | Vercel Blob read/write token for storing uploaded cover and post images.                                                                                                                                                                                  |
-| `ADMIN_EMAILS`                      | In production     | Comma- or space-separated primary email addresses allowed to use `/admin` and MCP admin tools.                                                                                                                                                            |
-| `ADMIN_USER_IDS`                    | In production     | Comma- or space-separated Clerk user IDs (`user_...`) allowed to use `/admin` and MCP admin tools. (Provide `ADMIN_EMAILS`, `ADMIN_USER_IDS`, or both. If both are empty, everyone signed in is an admin in dev/preview and **nobody** is in production.) |
-| `MCP_ALLOWED_OAUTH_CLIENT_IDS`      | In production     | Comma- or space-separated OAuth client IDs allowed to call `/api/mcp`, or `*` to allow any OAuth client. If unset, any client is allowed in dev/preview and **none** in production.                                                                       |
-| `MCP_TOKEN_AUDIENCE`                | Optional          | `off`, `log`, or `enforce` for validating RFC 8707 `aud` claims (`https://<domain>/api/mcp`) on Clerk OAuth tokens. Defaults to `log` in production and `off` elsewhere.                                                                                  |
-| `NEXT_PUBLIC_SITE_URL`              | Optional          | Canonical origin (e.g. `https://blog.example.com`) for sitemaps, feeds, and OpenGraph URLs when not using `VERCEL_PROJECT_PRODUCTION_URL`.                                                                                                                |
+| Variable                            | Required          | Description                                                                                                                                                                                                                                                                    |
+| ----------------------------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `DATABASE_URL`                      | Yes               | Neon Postgres connection string (or `postgres://postgres:<pw>@db.localtest.me:5432/main` locally). Set automatically by the Vercel Neon integration.                                                                                                                           |
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Yes               | Clerk publishable key (`pk_test_...` or `pk_live_...`). Also used to derive the OAuth issuer URL for MCP discovery.                                                                                                                                                            |
+| `CLERK_SECRET_KEY`                  | Yes               | Clerk secret key (`sk_test_...` or `sk_live_...`).                                                                                                                                                                                                                             |
+| `BLOB_READ_WRITE_TOKEN`             | Yes (for uploads) | Vercel Blob read/write token for storing uploaded cover and post images.                                                                                                                                                                                                       |
+| `ADMIN_EMAILS`                      | In production     | Comma- or space-separated primary email addresses allowed to use `/admin` and MCP admin tools.                                                                                                                                                                                 |
+| `ADMIN_USER_IDS`                    | In production     | Comma- or space-separated Clerk user IDs (`user_...`) allowed to use `/admin` and MCP admin tools. (Provide `ADMIN_EMAILS`, `ADMIN_USER_IDS`, or both. If both are empty, everyone signed in is an admin in local development and **nobody** is on Vercel, previews included.) |
+| `MCP_ALLOWED_OAUTH_CLIENT_IDS`      | In production     | Comma- or space-separated OAuth client IDs allowed to call `/api/mcp`, or `*` to allow any OAuth client. If unset, any client is allowed in local development and **none** on Vercel, previews included.                                                                       |
+| `MCP_TOKEN_AUDIENCE`                | Optional          | `off`, `log`, or `enforce` for validating RFC 8707 `aud` claims (`https://<domain>/api/mcp`) on Clerk OAuth tokens. Defaults to `off` in local development and `log` on Vercel (production and preview).                                                                       |
+| `NEXT_PUBLIC_SITE_URL`              | Optional          | Canonical origin (e.g. `https://blog.example.com`) for sitemaps, feeds, and OpenGraph URLs when not using `VERCEL_PROJECT_PRODUCTION_URL`.                                                                                                                                     |
 
 ---
 
