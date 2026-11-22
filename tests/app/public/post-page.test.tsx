@@ -72,6 +72,17 @@ describe("post page", () => {
     expect(html).toContain("Hello world");
   });
 
+  it("shows when a published post was updated later", async () => {
+    mocks.dbGetPublishedPostBySlug.mockResolvedValue(
+      makePost({ updatedAt: "2026-11-21T08:00:00.000Z" }),
+    );
+    const html = await renderToHtml(
+      <PostPage params={params("hello-world")} />,
+    );
+    expect(html).toContain("Updated on");
+    expect(html).toContain("Nov 21, 2026");
+  });
+
   it("calls notFound for a missing post", async () => {
     mocks.dbGetPublishedPostBySlug.mockResolvedValue(null);
     const errors: unknown[] = [];

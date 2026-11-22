@@ -109,6 +109,7 @@ function PostBody({ post }: { post: Post }) {
         <PostMeta
           minutes={readingMinutes(post.blocks)}
           publishedAt={post.publishedAt}
+          updatedAt={post.updatedAt}
         />
       </header>
       {post.coverImageUrl ? (
