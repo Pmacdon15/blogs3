@@ -1,8 +1,10 @@
 import type { AuthInfo } from "@modelcontextprotocol/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { createRateLimiter } from "@/lib/rate-limit";
 import {
   bearerToken,
   callerLabel,
+  defaultMcpRateLimits,
   MCP_CORS_HEADERS,
   MCP_SCOPES,
   mcpResourceUrl,
@@ -329,5 +331,97 @@ describe("mcpRoute", () => {
     const route = mcpRoute(handler, async () => authInfo);
     const res = await route(post({ accept: "text/event-stream" }));
     expect(res.headers.get("content-type")).toBe("text/event-stream");
+  });
+
+  describe("rate limits", () => {
+    const limits = () => ({
+      unauthenticated: createRateLimiter({ limit: 2, windowMs: 60_000 }),
+      user: createRateLimiter({ limit: 2, windowMs: 60_000 }),
+    });
+    const fromIp = (ip: string, headers: Record<string, string> = {}) =>
+      new Request(URL_, {
+        method: "POST",
+        headers: { "x-real-ip": ip, ...headers },
+      });
+
+    it("defaults to 20 unauthenticated and 120 per-user calls a minute", () => {
+      const { unauthenticated, user } = defaultMcpRateLimits();
+      expect(unauthenticated.peek("ip").remaining).toBe(20);
+      expect(user.peek("user").remaining).toBe(120);
+    });
+
+    it("cuts off an IP after too many failed or missing tokens, before verifying", async () => {
+      const verify = vi.fn(async (_req: Request, token: string) =>
+        token === "oat_good" ? authInfo : undefined,
+      );
+      const route = mcpRoute(ok(), verify, limits());
+      expect((await route(fromIp("1.1.1.1"))).status).toBe(401);
+      expect(
+        (await route(fromIp("1.1.1.1", { authorization: "Bearer oat_bad" })))
+          .status,
+      ).toBe(401);
+      const limited = await route(
+        fromIp("1.1.1.1", { authorization: "Bearer oat_good" }),
+      );
+      expect(limited.status).toBe(429);
+      expect(limited.headers.get("Access-Control-Allow-Origin")).toBe("*");
+      expect(limited.headers.get("Retry-After")).toBe("60");
+      await expect(limited.json()).resolves.toEqual({
+        error: "rate_limited",
+        error_description: "Too many requests. Try again in 60 seconds.",
+      });
+      expect(verify).toHaveBeenCalledTimes(1);
+      // Another IP is unaffected.
+      expect(
+        (await route(fromIp("2.2.2.2", { authorization: "Bearer oat_good" })))
+          .status,
+      ).toBe(200);
+    });
+
+    it("counts expired tokens as failures", async () => {
+      const route = mcpRoute(
+        ok(),
+        async () => ({ ...authInfo, expiresAt: 1 }),
+        limits(),
+      );
+      const expired = () =>
+        route(fromIp("3.3.3.3", { authorization: "Bearer oat_1" }));
+      expect((await expired()).status).toBe(401);
+      expect((await expired()).status).toBe(401);
+      expect((await expired()).status).toBe(429);
+    });
+
+    it("limits each verified user, with RateLimit headers on answers", async () => {
+      const handler = ok();
+      const route = mcpRoute(handler, async () => authInfo, limits());
+      const call = (ip: string) =>
+        route(fromIp(ip, { authorization: "Bearer oat_1" }));
+      const first = await call("4.4.4.4");
+      expect(first.status).toBe(200);
+      expect(first.headers.get("RateLimit-Limit")).toBe("2");
+      expect(first.headers.get("RateLimit-Remaining")).toBe("1");
+      expect(first.headers.get("Access-Control-Expose-Headers")).toContain(
+        "Retry-After",
+      );
+      // The same user from another IP shares the limit.
+      expect((await call("5.5.5.5")).status).toBe(200);
+      expect((await call("6.6.6.6")).status).toBe(429);
+      expect(handler).toHaveBeenCalledTimes(2);
+    });
+
+    it("keys a token without a user id by its client", async () => {
+      const route = mcpRoute(
+        ok(),
+        async () => ({ ...authInfo, extra: {} }),
+        limits(),
+      );
+      const call = () => route(post());
+      await call();
+      await call();
+      expect((await call()).status).toBe(429);
+      expect(console.warn).toHaveBeenCalledWith(
+        "MCP: rate limited user undefined",
+      );
+    });
   });
 });

@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { CoverImage } from "@/components/blog/cover-image";
 import { PostCard, postHref } from "@/components/blog/post-card";
 import { EmptyPosts, PostList } from "@/components/blog/post-list";
-import { PostMeta } from "@/components/blog/post-meta";
+import { PostMeta, wasUpdated } from "@/components/blog/post-meta";
 import { TagList } from "@/components/blog/tag-list";
 import { makeSummary } from "./fixtures";
 
@@ -22,6 +22,44 @@ describe("PostMeta", () => {
     expect(container.textContent).toBe("");
     rerender(<PostMeta minutes={2} publishedAt={null} />);
     expect(container.textContent).toBe("2 min read");
+  });
+
+  it("shows an Updated date when edited on a later day", () => {
+    render(
+      <PostMeta
+        minutes={3}
+        publishedAt="2026-11-19T10:00:00.000Z"
+        updatedAt="2026-11-21T08:00:00.000Z"
+      />,
+    );
+    expect(screen.getByText("Nov 21, 2026")).toHaveAttribute(
+      "dateTime",
+      "2026-11-21T08:00:00.000Z",
+    );
+    expect(screen.getByText(/Updated on/)).toBeInTheDocument();
+  });
+
+  it("hides the Updated date for same-day edits", () => {
+    const { container } = render(
+      <PostMeta
+        publishedAt="2026-11-19T10:00:00.000Z"
+        updatedAt="2026-11-19T18:00:00.000Z"
+      />,
+    );
+    expect(container.textContent).not.toContain("Updated");
+  });
+});
+
+describe("wasUpdated", () => {
+  it("needs a later day after publishing", () => {
+    expect(wasUpdated(null, "2026-11-21T00:00:00.000Z")).toBe(false);
+    expect(wasUpdated("2026-11-19T00:00:00.000Z")).toBe(false);
+    expect(
+      wasUpdated("2026-11-21T00:00:00.000Z", "2026-11-19T00:00:00.000Z"),
+    ).toBe(false);
+    expect(
+      wasUpdated("2026-11-19T00:00:00.000Z", "2026-11-20T00:00:00.000Z"),
+    ).toBe(true);
   });
 });
 

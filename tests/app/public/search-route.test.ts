@@ -15,7 +15,7 @@ vi.mock("next/cache", () => ({
   cacheTag: mocks.cacheTag,
 }));
 
-import { GET } from "@/app/api/posts/search/route";
+import { GET, SEARCH_RATE_LIMIT } from "@/app/api/posts/search/route";
 
 const get = (query: string) =>
   GET(new Request(`http://localhost/api/posts/search${query}`));
@@ -48,5 +48,27 @@ describe("GET /api/posts/search", () => {
     expect(await response.json()).toEqual({
       error: "Search query must be at most 100 characters.",
     });
+  });
+
+  it("limits each client IP to 60 searches a minute", async () => {
+    mocks.dbSearchPublishedPosts.mockResolvedValue([]);
+    const from = (ip: string) =>
+      GET(
+        new Request("http://localhost/api/posts/search?q=hello", {
+          headers: { "x-real-ip": ip },
+        }),
+      );
+    for (let i = 0; i < 60; i++) {
+      expect((await from("9.9.9.9")).status).toBe(200);
+    }
+    const limited = await from("9.9.9.9");
+    expect(limited.status).toBe(429);
+    expect(limited.headers.get("Cache-Control")).toBe("no-store");
+    expect(Number(limited.headers.get("Retry-After"))).toBeGreaterThan(0);
+    expect(await limited.json()).toEqual({
+      error: "Too many searches. Try again in a minute.",
+    });
+    expect((await from("8.8.8.8")).status).toBe(200);
+    expect(SEARCH_RATE_LIMIT.peek("9.9.9.9").allowed).toBe(false);
   });
 });

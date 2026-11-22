@@ -59,6 +59,10 @@ describe("post page", () => {
     expect(html).toContain("Some words here.");
     expect(html).toContain('type="application/ld+json"');
     expect(html).toContain('"@type":"BlogPosting"');
+    expect(html).toContain("Share this post");
+    expect(html).toContain(
+      encodeURIComponent("http://localhost:3000/blog/hello-world"),
+    );
   });
 
   it("renders a post without excerpt or cover", async () => {
@@ -70,6 +74,17 @@ describe("post page", () => {
     );
     expect(html).not.toContain("<img");
     expect(html).toContain("Hello world");
+  });
+
+  it("shows when a published post was updated later", async () => {
+    mocks.dbGetPublishedPostBySlug.mockResolvedValue(
+      makePost({ updatedAt: "2026-11-21T08:00:00.000Z" }),
+    );
+    const html = await renderToHtml(
+      <PostPage params={params("hello-world")} />,
+    );
+    expect(html).toContain("Updated on");
+    expect(html).toContain("Nov 21, 2026");
   });
 
   it("calls notFound for a missing post", async () => {
