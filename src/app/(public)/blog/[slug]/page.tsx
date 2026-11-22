@@ -7,13 +7,14 @@ import { Suspense } from "react";
 import { CoverImage } from "@/components/blog/cover-image";
 import { PostBlocks } from "@/components/blog/post-blocks";
 import { PostMeta } from "@/components/blog/post-meta";
+import { ShareButtons } from "@/components/blog/share-buttons";
 import { TagList } from "@/components/blog/tag-list";
 import { JsonLd } from "@/components/seo/json-ld";
 import { ArticleSkeleton } from "@/components/ui/skeleton";
 import { dbGetPublishedPostBySlug } from "@/db/posts";
 import { CACHE_TAGS } from "@/lib/cache/tags";
 import { readingMinutes } from "@/lib/reading-time";
-import { blogPostingJsonLd } from "@/lib/seo";
+import { absoluteUrl, blogPostingJsonLd } from "@/lib/seo";
 import type { Post } from "@/lib/types";
 
 type Props = { params: Promise<{ slug: string }> };
@@ -123,6 +124,12 @@ function PostBody({ post }: { post: Post }) {
       ) : null}
       <div className="mt-10">
         <PostBlocks blocks={post.blocks} />
+      </div>
+      <div className="mt-12">
+        <ShareButtons
+          title={post.title}
+          url={absoluteUrl(`/blog/${post.slug}`)}
+        />
       </div>
     </>
   );
