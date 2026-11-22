@@ -38,7 +38,7 @@ export function TagsInput({
       <label className="font-medium text-ink text-xs" htmlFor={inputId}>
         Tags
       </label>
-      <div className="flex min-h-9 flex-wrap items-center gap-1.5 rounded-lg border border-line bg-surface px-2 py-1.5 focus-within:border-brand-400">
+      <div className="flex min-h-9 flex-wrap items-center gap-1.5 rounded-lg border border-line bg-surface px-2 py-1.5 focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-500/25">
         {value.map((tag) => (
           <span
             className="inline-flex items-center gap-1 rounded-md bg-brand-50 py-0.5 pr-1 pl-2 font-medium text-brand-800 text-xs"
@@ -47,7 +47,7 @@ export function TagsInput({
             {tag}
             <button
               aria-label={`Remove tag ${tag}`}
-              className="rounded p-0.5 text-brand-500 hover:bg-brand-100 hover:text-brand-800"
+              className="-my-1 grid size-6 place-items-center rounded text-brand-700 hover:bg-brand-100 hover:text-brand-800"
               onClick={() => onChange(value.filter((t) => t !== tag))}
               type="button"
             >
@@ -58,7 +58,7 @@ export function TagsInput({
         <input
           aria-describedby={hintId}
           aria-invalid={error ? true : undefined}
-          className="min-w-24 flex-1 bg-transparent py-0.5 text-sm outline-none placeholder:text-muted/70 disabled:cursor-not-allowed"
+          className="min-w-24 flex-1 bg-transparent py-0.5 text-sm outline-none placeholder:text-muted disabled:cursor-not-allowed"
           disabled={full}
           id={inputId}
           onBlur={() => commit(draft)}

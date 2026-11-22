@@ -24,7 +24,7 @@ describe("McpServerUrl", () => {
     expect(url).toHaveTextContent(`${window.location.origin}/api/mcp`);
 
     const button = screen.getByRole("button", {
-      name: "Copy MCP server URL",
+      name: "Copy URL of the MCP server",
     });
     expect(button).toHaveTextContent("Copy URL");
     await act(async () => {
@@ -32,6 +32,7 @@ describe("McpServerUrl", () => {
     });
     expect(writeText).toHaveBeenCalledWith(url.textContent);
     expect(button).toHaveTextContent("Copied");
+    expect(button).toHaveAccessibleName("Copied");
     expect(screen.getByRole("status")).toHaveTextContent(
       "Copied the MCP server URL.",
     );

@@ -157,3 +157,96 @@ jobs:
           exit 1
       # `next build`, then check every page kept its static shell.
       - run: bun run test:build
+
+  e2e:
+    name: End-to-end and accessibility
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    # A production build against Postgres behind Neon's HTTP proxy, as in the
+    # static-shell job, seeded with the e2e fixture posts before the build
+    # (the home page's post list is prerendered).
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_HOST_AUTH_METHOD: trust
+          POSTGRES_DB: main
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres -d main"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 30
+      neon-proxy:
+        image: ghcr.io/timowilhelm/local-neon-http-proxy:main
+        env:
+          PG_CONNECTION_STRING: postgres://postgres@postgres:5432/main
+          PGPASSWORD: ${{ github.run_id }}
+        ports: ["4444:4444"]
+    env:
+      NEXT_TELEMETRY_DISABLED: 1
+      # Optional: with these repository secrets (a Clerk *development*
+      # instance and one of its users) the editor tests run too; without
+      # them (forks, or not set up yet) only the public-site tests run.
+      E2E_CLERK_USER_EMAIL: ${{ secrets.E2E_CLERK_USER_EMAIL }}
+      ADMIN_EMAILS: ${{ secrets.E2E_CLERK_USER_EMAIL }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: package.json
+      - run: bun install --frozen-lockfile
+      - name: Clerk keys
+        env:
+          PUBLISHABLE_KEY: ${{ secrets.E2E_CLERK_PUBLISHABLE_KEY }}
+          SECRET_KEY: ${{ secrets.E2E_CLERK_SECRET_KEY }}
+        run: |
+          if [ -n "$PUBLISHABLE_KEY" ] && [ -n "$SECRET_KEY" ]; then
+            echo "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=$PUBLISHABLE_KEY" >> "$GITHUB_ENV"
+            echo "CLERK_SECRET_KEY=$SECRET_KEY" >> "$GITHUB_ENV"
+          else
+            # Placeholders, made at runtime; e2e/fixtures.ts keeps the
+            # browser from needing a real Clerk instance.
+            echo "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_$(printf 'example.clerk.accounts.dev$' | base64)" >> "$GITHUB_ENV"
+            echo "CLERK_SECRET_KEY=sk_test_$(openssl rand -hex 16)" >> "$GITHUB_ENV"
+          fi
+      - name: Database role password
+        run: |
+          password="$(openssl rand -hex 16)"
+          echo "::add-mask::$password"
+          psql -h localhost -U postgres -d main -v ON_ERROR_STOP=1 \
+            -c "alter role postgres password '$password'"
+          printf 'DATABASE_URL=%s://%s:%s@%s/main\n' \
+            postgres postgres "$password" db.localtest.me:5432 >> "$GITHUB_ENV"
+      - name: Apply schema.sql and the e2e fixtures
+        run: |
+          psql "postgres://postgres@localhost:5432/main" -v ON_ERROR_STOP=1 -f schema.sql
+          psql "postgres://postgres@localhost:5432/main" -v ON_ERROR_STOP=1 -f e2e/seed.sql
+      - name: Wait for the Neon HTTP proxy
+        run: |
+          for attempt in $(seq 1 30); do
+            if curl -sf -X POST http://localhost:4444/sql \
+              -H "Neon-Connection-String: $DATABASE_URL" \
+              -H "Content-Type: application/json" \
+              -d '{"query":"select count(*) from posts","params":[]}'; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::The Neon HTTP proxy never answered on port 4444"
+          exit 1
+      - run: bun run build
+      - run: bunx playwright install --with-deps chromium
+      - run: bun run test:e2e
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ failure() }}
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7

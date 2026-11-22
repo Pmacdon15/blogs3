@@ -1,10 +1,9 @@
 import Link from "next/link";
 
-/** The "Blogs" wordmark with its gradient mark; links home. */
+/** The "Blogs" wordmark with its gradient mark; links home ("Blogs home"). */
 export function Logo() {
   return (
     <Link
-      aria-label="Blogs home"
       className="group inline-flex items-center gap-2.5 rounded-lg"
       href="/"
     >
@@ -15,7 +14,8 @@ export function Logo() {
         B
       </span>
       <span className="font-semibold text-ink text-lg tracking-tight">
-        Blogs
+        {/* Starts with the visible text, so voice control can say "Blogs". */}
+        Blogs <span className="sr-only">home</span>
       </span>
     </Link>
   );

@@ -71,14 +71,34 @@ const ICONS: Record<BlockType, typeof Type> = {
 };
 
 const inputClass =
-  "w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm placeholder:text-muted/70 focus:border-brand-400 aria-invalid:border-red-400";
+  "w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm placeholder:text-muted focus:border-brand-500 aria-invalid:border-red-400";
 
 const iconButton =
   "inline-flex size-7 items-center justify-center rounded-md text-muted transition-colors hover:bg-brand-50 hover:text-brand-700 disabled:pointer-events-none disabled:opacity-40";
 
+/** Where keyboard focus goes after the block list changes. */
+type FocusTarget = { blockId: string; selector: string } | "toolbar";
+
+const FIRST_FIELD = "input:not([type=file]), textarea";
+
+/** The control inside `list` that `target` names, if it's rendered. */
+export function findFocusTarget(
+  list: HTMLElement | null,
+  toolbar: HTMLElement | null,
+  target: FocusTarget,
+): HTMLElement | null {
+  if (target === "toolbar") return toolbar?.querySelector("button") ?? null;
+  const item = Array.from(list?.children ?? []).find(
+    (child) => (child as HTMLElement).dataset.blockId === target.blockId,
+  );
+  return item?.querySelector<HTMLElement>(target.selector) ?? null;
+}
+
 /*
  * The post body: an ordered list of blocks. Add from the toolbar or the "+"
- * between blocks; each block can be moved, duplicated or deleted.
+ * between blocks; each block can be moved, duplicated or deleted. Focus
+ * follows the change (a new block's first field, the block after a deleted
+ * one, a moved block's arrow), so keyboard users never land on <body>.
  */
 export function BlockEditor({
   blocks,
@@ -92,8 +112,42 @@ export function BlockEditor({
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [dropTargetIndex, setDropTargetIndex] = useState<number | null>(null);
   const full = blocks.length >= MAX_BLOCKS;
-  const add = (index: number, type: BlockType) =>
-    onChange(insertBlock(blocks, index, newBlock(type)));
+  const listRef = useRef<HTMLOListElement>(null);
+  const toolbarRef = useRef<HTMLDivElement>(null);
+  const focusTarget = useRef<FocusTarget | null>(null);
+
+  useLayoutEffect(() => {
+    const target = focusTarget.current;
+    if (!target) return;
+    focusTarget.current = null;
+    findFocusTarget(listRef.current, toolbarRef.current, target)?.focus();
+  });
+
+  function add(index: number, type: BlockType) {
+    const block = newBlock(type);
+    focusTarget.current = { blockId: block.id, selector: FIRST_FIELD };
+    onChange(insertBlock(blocks, index, block));
+  }
+
+  function remove(index: number) {
+    const next = blocks[index + 1] ?? blocks[index - 1];
+    focusTarget.current = next
+      ? { blockId: next.id, selector: '[data-action="drag"]' }
+      : "toolbar";
+    onChange(removeBlock(blocks, index));
+  }
+
+  function move(index: number, by: -1 | 1) {
+    const to = index + by;
+    // At either end the arrow just pressed turns disabled; use the other one.
+    const edge = to === 0 || to === blocks.length - 1;
+    const direction = (by === -1) === edge ? "down" : "up";
+    focusTarget.current = {
+      blockId: blocks[index].id,
+      selector: `[data-action="move-${direction}"]`,
+    };
+    onChange(moveBlock(blocks, index, by));
+  }
 
   function handleDragEnd() {
     setDragIndex(null);
@@ -105,6 +159,7 @@ export function BlockEditor({
       <div
         aria-label="Add a block"
         className="flex flex-wrap items-center gap-1 rounded-xl border border-line bg-surface p-1.5"
+        ref={toolbarRef}
         role="toolbar"
       >
         <span className="px-2 font-medium text-muted text-xs">Add</span>
@@ -131,9 +186,10 @@ export function BlockEditor({
         </p>
       ) : null}
 
-      <ol className="flex flex-col">
+      <ol className="flex flex-col" ref={listRef}>
         {blocks.map((block, index) => (
           <li
+            data-block-id={block.id}
             key={block.id}
             onDragOver={(event) => {
               if (dragIndex === null) return;
@@ -171,14 +227,14 @@ export function BlockEditor({
                 dragIndex !== index
               }
               onChange={(next) => onChange(replaceBlock(blocks, index, next))}
-              onDelete={() => onChange(removeBlock(blocks, index))}
+              onDelete={() => remove(index)}
               onDragEnd={handleDragEnd}
               onDragStart={(event) => {
                 setDragIndex(index);
                 event.dataTransfer?.setData("text/plain", String(index));
               }}
               onDuplicate={() => onChange(duplicateBlock(blocks, index))}
-              onMove={(by) => onChange(moveBlock(blocks, index, by))}
+              onMove={(by) => move(index, by)}
             />
           </li>
         ))}
@@ -199,6 +255,23 @@ export function InsertMenu({
   onPick: (type: BlockType) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const menuRef = useRef<HTMLFieldSetElement>(null);
+  const toggleRef = useRef<HTMLButtonElement>(null);
+  // Where focus goes when the menu opens or closes, so it never drops to <body>.
+  const focusNext = useRef<"menu" | "toggle" | null>(null);
+
+  useLayoutEffect(() => {
+    if (focusNext.current === "menu")
+      menuRef.current?.querySelector("button")?.focus();
+    if (focusNext.current === "toggle") toggleRef.current?.focus();
+    focusNext.current = null;
+  });
+
+  function close(returnFocus: boolean) {
+    focusNext.current = returnFocus ? "toggle" : null;
+    setOpen(false);
+  }
+
   return (
     <div className="group relative flex h-6 items-center justify-center">
       <span
@@ -209,13 +282,20 @@ export function InsertMenu({
         <fieldset
           aria-label={`Block type for position ${index + 1}`}
           className="relative z-10 m-0 flex min-w-0 gap-1 rounded-lg border border-line bg-surface p-1 shadow-(--shadow-card)"
+          onKeyDown={(event) => {
+            if (event.key === "Escape") {
+              event.preventDefault();
+              close(true);
+            }
+          }}
+          ref={menuRef}
         >
           {BLOCK_TYPES.map((type) => (
             <button
-              className="rounded-md px-2 py-0.5 font-medium text-ink text-xs hover:bg-brand-50 hover:text-brand-700"
+              className="h-6 rounded-md px-2 font-medium text-ink text-xs hover:bg-brand-50 hover:text-brand-700"
               key={type}
               onClick={() => {
-                setOpen(false);
+                close(false);
                 onPick(type);
               }}
               type="button"
@@ -225,8 +305,8 @@ export function InsertMenu({
           ))}
           <button
             aria-label="Cancel"
-            className="rounded-md px-1.5 text-muted text-xs hover:bg-brand-50"
-            onClick={() => setOpen(false)}
+            className="h-6 min-w-6 rounded-md px-1.5 text-muted text-xs hover:bg-brand-50"
+            onClick={() => close(true)}
             type="button"
           >
             ✕
@@ -235,9 +315,13 @@ export function InsertMenu({
       ) : (
         <button
           aria-label={`Insert a block at position ${index + 1}`}
-          className="relative z-10 inline-flex size-6 items-center justify-center rounded-full border border-line bg-surface text-muted opacity-60 transition hover:border-brand-300 hover:text-brand-700 hover:opacity-100 focus-visible:opacity-100 disabled:hidden"
+          className="relative z-10 inline-flex size-6 items-center justify-center rounded-full border border-line bg-surface text-muted opacity-80 transition hover:border-brand-300 hover:text-brand-700 hover:opacity-100 focus-visible:opacity-100 disabled:hidden"
           disabled={disabled}
-          onClick={() => setOpen(true)}
+          onClick={() => {
+            focusNext.current = "menu";
+            setOpen(true);
+          }}
+          ref={toggleRef}
           type="button"
         >
           <Plus aria-hidden="true" className="size-3.5" />
@@ -283,7 +367,7 @@ function BlockCard({
   return (
     <div
       className={cn(
-        "group/block rounded-xl border border-line bg-surface shadow-xs transition-shadow focus-within:border-brand-300 focus-within:shadow-(--shadow-card)",
+        "group/block rounded-xl border border-line bg-surface shadow-xs transition-shadow focus-within:border-brand-500 focus-within:shadow-(--shadow-card) focus-within:ring-2 focus-within:ring-brand-500/20",
         isDragging && "opacity-50",
         isDropTarget && "border-brand-400 ring-2 ring-brand-200",
       )}
@@ -293,6 +377,7 @@ function BlockCard({
           <button
             aria-label={`Drag ${label}`}
             className={cn(iconButton, "cursor-grab active:cursor-grabbing")}
+            data-action="drag"
             draggable
             onDragEnd={onDragEnd}
             onDragStart={onDragStart}
@@ -309,6 +394,7 @@ function BlockCard({
           <button
             aria-label={`Move ${label} up`}
             className={iconButton}
+            data-action="move-up"
             disabled={index === 0}
             onClick={() => onMove(-1)}
             type="button"
@@ -318,6 +404,7 @@ function BlockCard({
           <button
             aria-label={`Move ${label} down`}
             className={iconButton}
+            data-action="move-down"
             disabled={index === count - 1}
             onClick={() => onMove(1)}
             type="button"
@@ -379,7 +466,7 @@ function BlockFields({
             aria-describedby={`${id}-error`}
             aria-invalid={error ? true : undefined}
             aria-label={label}
-            className="w-full bg-transparent font-semibold text-ink text-xl tracking-tight outline-none placeholder:text-muted/60"
+            className="w-full bg-transparent font-semibold text-ink text-xl tracking-tight outline-none placeholder:text-muted"
             onChange={(event) =>
               onChange({ ...block, text: event.target.value })
             }
@@ -564,7 +651,7 @@ function TextFields({
         aria-describedby={`${id}-error`}
         aria-invalid={error ? true : undefined}
         aria-label={label}
-        className="w-full bg-transparent text-[15px] text-ink leading-relaxed outline-none placeholder:text-muted/60"
+        className="w-full bg-transparent text-[15px] text-ink leading-relaxed outline-none placeholder:text-muted"
         id={`${id}-text`}
         onChange={(event) => onChange({ ...block, text: event.target.value })}
         onKeyDown={onKeyDown}
@@ -601,6 +688,8 @@ function CodeFields({
   const id = useId();
   const ref = useRef<HTMLTextAreaElement>(null);
   const caret = useRef<number | null>(null);
+  // Esc releases the next Tab, so keyboard users can leave the field (WCAG 2.1.2).
+  const released = useRef(false);
   const [theme, setTheme] = useState<CodeTheme>(DEFAULT_CODE_THEME);
   const palette = CODE_THEME_STYLES[theme];
 
@@ -613,7 +702,13 @@ function CodeFields({
   });
 
   function onKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
-    if (event.key !== "Tab" || event.shiftKey) return;
+    if (event.key === "Escape") {
+      released.current = true;
+      return;
+    }
+    const wasReleased = released.current;
+    released.current = false;
+    if (event.key !== "Tab" || event.shiftKey || wasReleased) return;
     event.preventDefault();
     const { selectionStart, selectionEnd } = event.currentTarget;
     const next = indent(block.code, selectionStart, selectionEnd);
@@ -645,7 +740,7 @@ function CodeFields({
             Language for {label}
           </label>
           <select
-            className="rounded bg-transparent font-mono text-xs outline-none focus-visible:ring-1 focus-visible:ring-brand-400"
+            className="rounded bg-transparent font-mono text-xs outline-none focus-visible:ring-2 focus-visible:ring-brand-400"
             id={`${id}-language`}
             onChange={(event) =>
               onChange({
@@ -668,7 +763,7 @@ function CodeFields({
           </label>
           <select
             className={cn(
-              "rounded border px-1.5 py-0.5 font-mono text-[11px] outline-none focus-visible:ring-1 focus-visible:ring-brand-400",
+              "rounded border px-1.5 py-0.5 font-mono text-[11px] outline-none focus-visible:ring-2 focus-visible:ring-brand-400",
               palette.badge,
             )}
             id={`${id}-theme`}
@@ -686,7 +781,7 @@ function CodeFields({
           </label>
           <select
             className={cn(
-              "rounded border px-1.5 py-0.5 font-mono text-[11px] outline-none focus-visible:ring-1 focus-visible:ring-brand-400",
+              "rounded border px-1.5 py-0.5 font-mono text-[11px] outline-none focus-visible:ring-2 focus-visible:ring-brand-400",
               palette.badge,
             )}
             id={`${id}-preset`}
@@ -710,15 +805,20 @@ function CodeFields({
               </option>
             ))}
           </select>
-          <span className="text-[11px] opacity-75">Tab inserts 2 spaces</span>
+          <span className="text-[11px] opacity-90" id={`${id}-hint`}>
+            Tab inserts 2 spaces · Esc then Tab to leave
+          </span>
         </div>
       </div>
       <textarea
-        aria-describedby={`${id}-error`}
+        aria-describedby={`${id}-hint ${id}-error`}
         aria-invalid={error ? true : undefined}
         aria-label={label}
-        className="field-sizing-content block min-h-32 w-full resize-y bg-transparent p-3 font-mono text-sm leading-relaxed outline-none placeholder:opacity-50"
+        className="field-sizing-content block min-h-32 w-full resize-y bg-transparent p-3 font-mono text-sm leading-relaxed outline-none placeholder:opacity-75 focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-inset"
         onChange={(event) => onChange({ ...block, code: event.target.value })}
+        onBlur={() => {
+          released.current = false;
+        }}
         onKeyDown={onKeyDown}
         placeholder="// code"
         ref={ref}

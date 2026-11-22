@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { AutoTextarea, fitToContent } from "@/components/admin/auto-textarea";
 import { ConfirmDialog } from "@/components/admin/confirm-dialog";
@@ -162,6 +163,30 @@ describe("AutoTextarea", () => {
   });
 });
 
+const dialogText = {
+  title: "Delete this post?",
+  description: "Gone for good.",
+  confirmLabel: "Delete post",
+};
+
+/** Opens the dialog from a button, to check where focus goes back to. */
+function Opener() {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button onClick={() => setOpen(true)} type="button">
+        Open
+      </button>
+      <ConfirmDialog
+        {...dialogText}
+        onCancel={() => setOpen(false)}
+        onConfirm={vi.fn()}
+        open={open}
+      />
+    </>
+  );
+}
+
 describe("ConfirmDialog", () => {
   const base = {
     title: "Delete this post?",
@@ -204,6 +229,41 @@ describe("ConfirmDialog", () => {
     fireEvent.keyDown(dialog, { key: "a" });
     fireEvent.click(screen.getByRole("button", { name: "Close dialog" }));
     expect(onCancel).toHaveBeenCalledTimes(3);
+  });
+
+  it("keeps Tab inside and gives focus back to its opener on close", async () => {
+    const user = userEvent.setup();
+    render(<Opener />);
+    await user.click(screen.getByRole("button", { name: "Open" }));
+    const cancel = screen.getByRole("button", { name: "Cancel" });
+    const confirm = screen.getByRole("button", { name: "Delete post" });
+    expect(cancel).toHaveFocus();
+    await user.tab();
+    expect(confirm).toHaveFocus();
+    await user.tab();
+    expect(cancel).toHaveFocus();
+    await user.tab({ shift: true });
+    expect(confirm).toHaveFocus();
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Open" })).toHaveFocus();
+  });
+
+  it("keeps focus put while every button is disabled", () => {
+    render(
+      <ConfirmDialog
+        {...base}
+        onCancel={vi.fn()}
+        onConfirm={vi.fn()}
+        open
+        pending
+      />,
+    );
+    const dialog = screen.getByRole("alertdialog");
+    expect(fireEvent.keyDown(dialog, { key: "Tab" })).toBe(false);
+    expect(fireEvent.keyDown(dialog, { key: "Tab", shiftKey: true })).toBe(
+      false,
+    );
   });
 
   it("disables both buttons while pending", () => {
