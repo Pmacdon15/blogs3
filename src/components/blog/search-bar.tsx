@@ -43,6 +43,17 @@ export function statusText({
 const resultHref = (slug: string) => `/blog/${slug}` as Route;
 
 /*
+ * On touch screens the on-screen keyboard covers the bottom half of the
+ * page, and with it the results. Lift the search box to just under the
+ * header so the list has room above the keyboard.
+ */
+export function scrollAboveKeyboard(element: HTMLElement | null) {
+  if (typeof window.matchMedia !== "function") return;
+  if (!window.matchMedia("(pointer: coarse)").matches) return;
+  element?.scrollIntoView({ block: "start", behavior: "smooth" });
+}
+
+/*
  * Search as you type. An ARIA combobox: the input owns a listbox of results,
  * ↑/↓ move the active option, Enter opens it, Esc closes the list (or clears
  * the input when the list is already closed).
@@ -52,6 +63,7 @@ export function SearchBar() {
   const id = useId();
   const listId = `${id}-results`;
   const inputRef = useRef<HTMLInputElement>(null);
+  const searchRef = useRef<HTMLElement>(null);
   const [value, setValue] = useState("");
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
@@ -106,7 +118,7 @@ export function SearchBar() {
   }
 
   return (
-    <search className="relative w-full">
+    <search className="relative w-full scroll-mt-20" ref={searchRef}>
       <label className="sr-only" htmlFor={`${id}-input`}>
         Search posts
       </label>
@@ -131,7 +143,10 @@ export function SearchBar() {
             setActiveIndex(-1);
             setOpen(true);
           }}
-          onFocus={() => setOpen(true)}
+          onFocus={() => {
+            setOpen(true);
+            scrollAboveKeyboard(searchRef.current);
+          }}
           onKeyDown={onKeyDown}
           placeholder="Search posts by title, excerpt or tag…"
           ref={inputRef}
