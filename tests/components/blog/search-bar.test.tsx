@@ -1,6 +1,6 @@
 import { act, render, renderHook, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { makeSummary } from "./fixtures";
 
 type SearchState = {
@@ -22,6 +22,7 @@ vi.mock("@/hooks/use-post-search", () => ({
 
 import {
   SearchBar,
+  scrollAboveKeyboard,
   statusText,
   useDebouncedValue,
 } from "@/components/blog/search-bar";
@@ -68,6 +69,44 @@ describe("useDebouncedValue", () => {
     expect(result.current).toBe("a");
     act(() => vi.advanceTimersByTime(250));
     expect(result.current).toBe("ab");
+  });
+});
+
+describe("scrollAboveKeyboard", () => {
+  const original = window.matchMedia;
+  const withPointer = (coarse: boolean) => {
+    window.matchMedia = vi.fn(
+      () => ({ matches: coarse }) as MediaQueryList,
+    ) as typeof window.matchMedia;
+  };
+  const element = () => {
+    const el = document.createElement("div");
+    el.scrollIntoView = vi.fn();
+    return el;
+  };
+
+  afterEach(() => {
+    window.matchMedia = original;
+  });
+
+  it("scrolls the search to the top on touch screens", () => {
+    withPointer(true);
+    const el = element();
+    scrollAboveKeyboard(el);
+    expect(el.scrollIntoView).toHaveBeenCalledWith({
+      block: "start",
+      behavior: "smooth",
+    });
+    expect(() => scrollAboveKeyboard(null)).not.toThrow();
+  });
+
+  it("leaves the page alone with a mouse or without matchMedia", () => {
+    withPointer(false);
+    const el = element();
+    scrollAboveKeyboard(el);
+    window.matchMedia = undefined as unknown as typeof window.matchMedia;
+    scrollAboveKeyboard(el);
+    expect(el.scrollIntoView).not.toHaveBeenCalled();
   });
 });
 

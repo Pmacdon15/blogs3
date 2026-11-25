@@ -32,8 +32,11 @@ export default function HomePage() {
   return (
     <>
       <JsonLd data={websiteJsonLd()} />
-      <section className="relative isolate overflow-hidden">
-        <div aria-hidden="true" className="absolute inset-0 -z-10">
+      <section className="relative isolate z-10">
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 -z-10 overflow-hidden"
+        >
           <div className="absolute -top-32 left-1/2 h-[28rem] w-[56rem] -translate-x-1/2 rounded-full bg-linear-to-r from-brand-200/70 via-brand-100/60 to-sky-100/70 blur-3xl" />
           <div className="absolute top-24 -right-24 size-72 rounded-full bg-brand-400/20 blur-3xl" />
           <div className="absolute inset-x-0 bottom-0 h-24 bg-linear-to-b from-transparent to-canvas" />
