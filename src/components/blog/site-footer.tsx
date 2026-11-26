@@ -18,6 +18,11 @@ export function SiteFooter() {
               </Link>
             </li>
             <li>
+              <Link className="hover:text-brand-700" href="/about">
+                About
+              </Link>
+            </li>
+            <li>
               <Link className="hover:text-brand-700" href="/admin">
                 Admin
               </Link>

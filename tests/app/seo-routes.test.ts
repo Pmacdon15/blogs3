@@ -56,6 +56,12 @@ describe("SEO metadata routes", () => {
           changeFrequency: "daily",
           priority: 1,
         },
+        {
+          url: "https://blogs.example.com/about",
+          lastModified: "2026-11-19T12:00:00.000Z",
+          changeFrequency: "monthly",
+          priority: 0.5,
+        },
       ]);
     });
 

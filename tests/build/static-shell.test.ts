@@ -24,7 +24,7 @@ const MANIFEST = path.join(NEXT, "prerender-manifest.json");
 const APP = path.join(ROOT, "src/app");
 
 /** Pages that read no params/searchParams, so nothing stops them being ○. */
-const FULLY_STATIC = ["/", "/sign-in", "/sign-up", "/shell-check"];
+const FULLY_STATIC = ["/", "/about", "/sign-in", "/sign-up", "/shell-check"];
 
 type Prerender = {
   routeType?: "page" | "route" | "shell" | "fallback";
@@ -104,6 +104,7 @@ describe.skipIf(!built && !process.env.REQUIRE_BUILD)(
       const routes = pages.map((page) => page.route);
       for (const route of [
         "/",
+        "/about",
         "/blog/[slug]",
         "/sign-in/[[...sign-in]]",
         "/sign-up/[[...sign-up]]",

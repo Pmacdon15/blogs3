@@ -6,6 +6,9 @@ vi.mock("@clerk/nextjs", () => ({
   SignUp: () => <div data-testid="clerk-sign-up" />,
 }));
 
+import AboutPage, {
+  metadata as aboutMetadata,
+} from "@/app/(public)/about/page";
 import PostNotFound from "@/app/(public)/blog/[slug]/not-found";
 import PublicLayout from "@/app/(public)/layout";
 import SignInPage, {
@@ -33,6 +36,32 @@ describe("public layout", () => {
       "href",
       "/admin",
     );
+  });
+});
+
+describe("about page", () => {
+  it("introduces the author with links, skills and projects", () => {
+    const { container } = render(<AboutPage />);
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Hi, I'm Patrick" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Calgary, Alberta")).toBeInTheDocument();
+    const github = screen.getByRole("link", { name: /^GitHub/ });
+    expect(github).toHaveAttribute("href", "https://github.com/pmacdon15");
+    expect(github).toHaveAttribute("rel", "me noopener");
+    expect(screen.getByText("Next.js")).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: /Landscape Friend/ }),
+    ).toHaveAttribute("href", "https://landscapefriend.com");
+    const jsonLd = container.querySelector(
+      'script[type="application/ld+json"]',
+    );
+    expect(jsonLd?.textContent).toContain('"ProfilePage"');
+  });
+
+  it("has its own title and canonical URL", () => {
+    expect(aboutMetadata.title).toBe("About");
+    expect(aboutMetadata.alternates).toEqual({ canonical: "/about" });
   });
 });
 
