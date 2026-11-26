@@ -20,6 +20,14 @@ export function SiteHeader() {
                 Posts
               </Link>
             </li>
+            <li>
+              <Link
+                className="rounded-lg px-3 py-2 font-medium text-muted transition-colors hover:bg-brand-50 hover:text-brand-700"
+                href="/about"
+              >
+                About
+              </Link>
+            </li>
           </ul>
         </nav>
       </div>

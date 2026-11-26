@@ -35,6 +35,10 @@ describe("SiteHeader", () => {
       "href",
       "/",
     );
+    expect(screen.getByRole("link", { name: "About" })).toHaveAttribute(
+      "href",
+      "/about",
+    );
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
 });
@@ -45,6 +49,10 @@ describe("SiteFooter", () => {
     expect(screen.getByRole("link", { name: "All posts" })).toHaveAttribute(
       "href",
       "/",
+    );
+    expect(screen.getByRole("link", { name: "About" })).toHaveAttribute(
+      "href",
+      "/about",
     );
     expect(screen.getByRole("link", { name: "Admin" })).toHaveAttribute(
       "href",

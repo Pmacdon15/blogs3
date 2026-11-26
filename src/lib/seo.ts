@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { AUTHOR } from "@/lib/about";
 import type { Post } from "@/lib/types";
 
 export const SITE_NAME = "Blogs";
@@ -25,6 +26,7 @@ export type StaticSitemapRoute = {
  */
 export const PUBLIC_STATIC_ROUTES: readonly StaticSitemapRoute[] = [
   { path: "/", changeFrequency: "daily", priority: 1 },
+  { path: "/about", changeFrequency: "monthly", priority: 0.5 },
 ];
 
 const LOCAL_FALLBACK_URL = "http://localhost:3000";
@@ -81,6 +83,26 @@ export function websiteJsonLd(): Record<string, unknown> {
     name: SITE_NAME,
     description: SITE_DESCRIPTION,
     url: absoluteUrl("/"),
+  };
+}
+
+/** JSON-LD ProfilePage structured data for the about page. */
+export function profilePageJsonLd(): Record<string, unknown> {
+  return {
+    "@context": "https://schema.org",
+    "@type": "ProfilePage",
+    url: absoluteUrl("/about"),
+    mainEntity: {
+      "@type": "Person",
+      name: AUTHOR.name,
+      alternateName: AUTHOR.handle,
+      jobTitle: "Software Developer",
+      description: AUTHOR.headline,
+      homeLocation: { "@type": "Place", name: AUTHOR.location },
+      alumniOf: { "@type": "CollegeOrUniversity", name: "Bow Valley College" },
+      knowsAbout: [...AUTHOR.skills],
+      sameAs: AUTHOR.links.map((link) => link.href),
+    },
   };
 }
 

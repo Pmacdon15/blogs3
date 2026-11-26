@@ -11,6 +11,7 @@ import { expect, focusIsVisible, test } from "../fixtures";
 
 const PAGES = [
   { name: "home", path: "/", heading: "Notes, guides and ideas" },
+  { name: "about", path: "/about", heading: "Hi, I'm Patrick" },
   {
     name: "post",
     path: `/blog/${FIXTURES.post.slug}`,

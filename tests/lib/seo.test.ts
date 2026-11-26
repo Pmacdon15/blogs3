@@ -4,6 +4,7 @@ import {
   blogPostingJsonLd,
   blogSitemapUrls,
   getSiteUrl,
+  profilePageJsonLd,
   SITE_DESCRIPTION,
   SITE_NAME,
   SITEMAP_PAGE_SIZE,
@@ -79,6 +80,21 @@ describe("sitemap pagination helpers", () => {
 });
 
 describe("JSON-LD builders", () => {
+  it("builds ProfilePage schema for the author", () => {
+    vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://blogs.example.com");
+    const data = profilePageJsonLd();
+    expect(data).toMatchObject({
+      "@type": "ProfilePage",
+      url: "https://blogs.example.com/about",
+      mainEntity: {
+        "@type": "Person",
+        name: "Patrick MacDonald",
+        alternateName: "Pmacdon15",
+        sameAs: expect.arrayContaining(["https://github.com/pmacdon15"]),
+      },
+    });
+  });
+
   it("builds WebSite schema", () => {
     vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://blogs.example.com");
     expect(websiteJsonLd()).toEqual({
